@@ -15,5 +15,6 @@
 
 
 
-(ТЗ)[https://drive.google.com/file/d/1tJsi9USr5DtnMKV95gycdfgTjwq2JW3p/view]
+[ТЗ](https://drive.google.com/file/d/1tJsi9USr5DtnMKV95gycdfgTjwq2JW3p/view)
+
 
