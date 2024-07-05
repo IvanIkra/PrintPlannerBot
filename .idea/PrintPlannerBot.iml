@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <module version="4">
+<<<<<<< Updated upstream
   <component name="PackageRequirementsSettings">
     <option name="removeUnused" value="true" />
     <option name="modifyBaseFiles" value="true" />
   </component>
+=======
+>>>>>>> Stashed changes
   <component name="PyDocumentationSettings">
     <option name="format" value="PLAIN" />
     <option name="myDocStringFormat" value="Plain" />

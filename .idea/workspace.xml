@@ -50,12 +50,17 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
+<<<<<<< Updated upstream
     "Python.main.executor": "Run",
     "RunOnceActivity.ShowReadmeOnStart": "true",
 <<<<<<< Updated upstream
     "git-widget-placeholder": "main"
 =======
     "git-widget-placeholder": "darkman's-updates"
+>>>>>>> Stashed changes
+=======
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main"
 >>>>>>> Stashed changes
   }
 }]]></component>
