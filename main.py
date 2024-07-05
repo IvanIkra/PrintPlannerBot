@@ -1,10 +1,13 @@
 import asyncio
 import logging
+from datetime import date
+
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters.command import Command, Message, CommandObject
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+
 from config_reader import config
 from db_manage import *
-from datetime import date
 from payment import *
 
 logging.basicConfig(level=logging.INFO)
@@ -17,6 +20,10 @@ create_orders_table(conn)  # Создание таблицы заказов
 create_revenue_table(conn)  # Создание таблицы доходов
 create_expenses_table(conn)  # Создание таблицы расходов
 
+keyboard1 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⛑️Помощь")]],
+                                resize_keyboard=True,
+                                input_field_placeholder="Выберете пункт меню")  # Создание блок-клавиатуры
+
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
@@ -25,7 +32,7 @@ async def cmd_start(message: types.Message):
         "\nОтпратьте команду /help, чтобы узнать список доступных команд")
 
 
-@dp.message(Command("help"))
+@dp.message(lambda message: message.text in ["⛑️Помощь"])
 async def cmd_help(message: types.Message):
     await message.answer("/help - узнать список доступных команд\n\n"
                          "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала в граммах>@<дата выполнения>@<степень важности от 1 до 10>@<настройки> - новый заказ\n"
