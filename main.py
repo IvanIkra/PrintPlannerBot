@@ -29,7 +29,7 @@ keyboard1 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⛑️Помощ
 async def cmd_start(message: types.Message):
     await message.answer(
         "Вас приветствует команда разработчиков Binary Brigade. "
-        "\nОтпратьте команду /help, чтобы узнать список доступных команд")
+        "\nОтпратьте команду ⛑️Помощь, чтобы узнать список доступных команд", reply_markup=keyboard1)
 
 
 @dp.message(lambda message: message.text in ["⛑️Помощь"])
