@@ -2,10 +2,13 @@ import asyncio
 import logging
 from datetime import date
 
-from aiogram import Bot, Dispatcher, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command, Message, CommandObject
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.fsm.context import FSMContext
+from aiogram.fsm.state import StatesGroup, State
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, CallbackQuery
 
+import keyboards as kb
 from config_reader import config
 from db_manage import *
 from payment import *
@@ -25,11 +28,83 @@ keyboard1 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⛑️Помощ
                                 input_field_placeholder="Выберете пункт меню")  # Создание блок-клавиатуры
 
 
+class Ord(StatesGroup):
+    name = State()
+    link = State()
+    material = State()
+    material_amount = State()
+    recommended_date = State()
+    importance = State()
+    settings = State()
+
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
         "Вас приветствует команда разработчиков Binary Brigade. "
-        "\nОтпратьте команду ⛑️Помощь, чтобы узнать список доступных команд", reply_markup=keyboard1)
+        "\nОтпратьте команду ⛑️Помощь, чтобы узнать список доступных команд", reply_markup=kb.keyboard_inline2)
+
+
+@dp.message(Command("newoder"))
+async def ord_1(message: Message, state: FSMContext):
+    await state.set_state(Ord.name)
+    await message.answer("Введите название заказа")
+
+
+@dp.message(Ord.name)
+async def ord_2(message: Message, state: FSMContext):
+    await state.update_data(name=message.text)
+    await state.set_state(Ord.link)
+    await message.answer("Введите ссылку на 3D модель")
+
+
+@dp.message(Ord.link)
+async def ord_3(message: Message, state: FSMContext):
+    await state.update_data(link=message.text)
+    await state.set_state(Ord.material)
+    await message.answer("Введите название используемого материала")
+
+
+@dp.message(Ord.material)
+async def ord_4(message: Message, state: FSMContext):
+    await state.update_data(material=message.text)
+    await state.set_state(Ord.material_amount)
+    await message.answer("Введите количество(в граммах) используемого материала")
+
+
+@dp.message(Ord.material_amount)
+async def ord_5(message: Message, state: FSMContext):
+    await state.update_data(material_amount=message.text)
+    await state.set_state(Ord.recommended_date)
+    await message.answer("Введите дату выполнения")
+
+
+@dp.message(Ord.recommended_date)
+async def ord_6(message: Message, state: FSMContext):
+    await state.update_data(recommended_date=message.text)
+    await state.set_state(Ord.importance)
+    await message.answer("Введите важность заказа от 1 до 10")
+
+
+@dp.message(Ord.importance)
+async def ord_7(message: Message, state: FSMContext):
+    await state.update_data(importance=message.text)
+    await state.set_state(Ord.settings)
+    await message.answer("Введите необходимые настройки для печати")
+
+
+@dp.message(Ord.settings)
+async def ord_8(message: Message, state: FSMContext):
+    await state.update_data(settings=message.text)
+    data = await state.get_data()
+    await message.answer(
+        f'Вы хотите создать заказ с данными\nИмя заказа: {data["name"]}\n'
+        f'Ссылка на 3D модель: {data["link"]}\n'
+        f'Материал: {data["material"]}\n'
+        f'Количество материала: {data["material_amount"]}\n'
+        f'Дата выполнения: {data["recommended_date"]}\n'
+        f'Важность: {data["importance"]}\nНастройки: {data["settings"]}')
+    await state.clear()
 
 
 @dp.message(lambda message: message.text in ["⛑️Помощь"])
@@ -117,7 +192,7 @@ async def cmd_matupdatesub(
         material_amount = int(material_amount)
     except Exception as e:
         await message.answer(
-            "Ошибкwа: неправильный формат данных. Правильный формат:\n"
+            "Ошибка: неправильный формат данных. Правильный формат:\n"
             "/matupdatesub <название материала>@<количество материала>"
         )
         print(e)
@@ -141,7 +216,7 @@ async def cmd_addexp(
         summ = int(summ)
     except Exception as e:
         await message.answer(
-            "Ошибкwа: неправильный формат данных. Правильный формат:\n"
+            "Ошибка: неправильный формат данных. Правильный формат:\n"
             "/addexp <категория>@<сумма>@<название>"
         )
         print(e)
@@ -175,7 +250,7 @@ async def cmd_oder(
         id = int(id)
     except Exception as e:
         await message.answer(
-            "Ошибкwа: неправильный формат данных. Правильный формат:\n"
+            "Ошибка: неправильный формат данных. Правильный формат:\n"
             "/oder <id>"
         )
         print(e)
@@ -201,7 +276,7 @@ async def cmd_url(
         summ = int(summ)
     except Exception as e:
         await message.answer(
-            "Ошибкwа: неправильный формат данных. Правильный формат:\n"
+            "Ошибка: неправильный формат данных. Правильный формат:\n"
             "/paymenturl <сумма>"
         )
         print(e)
@@ -209,9 +284,25 @@ async def cmd_url(
     await message.answer(generate_link(summ)[0])
 
 
+@dp.callback_query(F.data == 'make_order')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Переход к созданию заказа")
+    await callback.message.edit_text(
+        "Чтобы создать заказ <имя заказа>@<ссылка на файл>@<название материала>@<количество материала>@<дата выполнения>@<степень важности от 1 до 10>@<настройки>")
+
+
+@dp.callback_query(F.data == 'menus')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к меню")
+    await callback.message.edit_text('Меню доступных команд:', reply_markup=kb.keyboard_inline1)
+
+
 async def main():
     await dp.start_polling(bot)
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        print('Exit')

@@ -65,7 +65,7 @@ def create_revenue_table(conn):
         print(e)
 
 
-# Вы правда это читаете?
+# Вы правда это читаете?(IvanIkra) - Да(s1ngul0r)
 def create_orders_table(conn):
     """ Создать или обновить таблицу заказов в базе данных """
     try:
