@@ -41,8 +41,8 @@ class Ord(StatesGroup):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
-        "Вас приветствует команда разработчиков Binary Brigade. "
-        "\nОтпратьте команду ⛑️Помощь, чтобы узнать список доступных команд", reply_markup=kb.keyboard_inline2)
+        "👋 Вас приветствует команда разработчиков Binary Brigade."
+        "\n*↓Нажмите, чтобы вызвать меню↓*", reply_markup=kb.keyboard_inline2, parse_mode="Markdown")
 
 
 @dp.message(Command("newoder"))
@@ -107,7 +107,7 @@ async def ord_8(message: Message, state: FSMContext):
     await state.clear()
 
 
-@dp.message(lambda message: message.text in ["⛑️Помощь"])
+@dp.message(Command("help"))
 async def cmd_help(message: types.Message):
     await message.answer("/help - узнать список доступных команд\n\n"
                          "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала в граммах>@<дата выполнения>@<степень важности от 1 до 10>@<настройки> - новый заказ\n"
@@ -285,10 +285,10 @@ async def cmd_url(
 
 
 @dp.callback_query(F.data == 'make_order')
-async def make_order(callback: CallbackQuery):
+async def make_order(callback: CallbackQuery, state: FSMContext):
     await callback.answer("Переход к созданию заказа")
-    await callback.message.edit_text(
-        "Чтобы создать заказ <имя заказа>@<ссылка на файл>@<название материала>@<количество материала>@<дата выполнения>@<степень важности от 1 до 10>@<настройки>")
+    await callback.message.edit_text("Введите название заказа")
+    await state.set_state(Ord.name)
 
 
 @dp.callback_query(F.data == 'menus')
