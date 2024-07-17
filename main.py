@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command, Message, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, CallbackQuery
+from aiogram.types import CallbackQuery
 
 import keyboards as kb
 from config_reader import config
@@ -22,10 +22,6 @@ create_table(conn)  # Создание таблицы материалов, ес
 create_orders_table(conn)  # Создание таблицы заказов
 create_revenue_table(conn)  # Создание таблицы доходов
 create_expenses_table(conn)  # Создание таблицы расходов
-
-keyboard1 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⛑️Помощь")]],
-                                resize_keyboard=True,
-                                input_field_placeholder="Выберете пункт меню")  # Создание блок-клавиатуры
 
 
 class Ord(StatesGroup):
@@ -69,28 +65,43 @@ async def ord_3(message: Message, state: FSMContext):
 async def ord_4(message: Message, state: FSMContext):
     await state.update_data(material=message.text)
     await state.set_state(Ord.material_amount)
-    await message.answer("Введите количество(в граммах) используемого материала")
+    await message.answer("Введите количество(в граммах) используемого материала (целое число)")
 
 
 @dp.message(Ord.material_amount)
 async def ord_5(message: Message, state: FSMContext):
-    await state.update_data(material_amount=message.text)
-    await state.set_state(Ord.recommended_date)
-    await message.answer("Введите дату выполнения")
+    try:
+        material_amount = int(message.text)
+        await state.update_data(material_amount=material_amount)
+        await state.set_state(Ord.recommended_date)
+        await message.answer("Введите дату выполнения (в формате ГГГГ-ММ-ДД)")
+    except ValueError:
+        await message.answer("Ошибка: количество материала должно быть целым числом. Пожалуйста, введите заново.")
 
 
 @dp.message(Ord.recommended_date)
 async def ord_6(message: Message, state: FSMContext):
-    await state.update_data(recommended_date=message.text)
-    await state.set_state(Ord.importance)
-    await message.answer("Введите важность заказа от 1 до 10")
+    try:
+        recommended_date = datetime.strptime(message.text, "%d-%m-%Y").date()
+        await state.update_data(recommended_date=recommended_date)
+        await state.set_state(Ord.importance)
+        await message.answer("Введите важность заказа от 1 до 10 (целое число)")
+    except ValueError:
+        await message.answer("Ошибка: дата должна быть в формате ГГГГ-ММ-ДД. Пожалуйста, введите заново.")
 
 
 @dp.message(Ord.importance)
 async def ord_7(message: Message, state: FSMContext):
-    await state.update_data(importance=message.text)
-    await state.set_state(Ord.settings)
-    await message.answer("Введите необходимые настройки для печати")
+    try:
+        importance = int(message.text)
+        if 1 <= importance <= 10:
+            await state.update_data(importance=importance)
+            await state.set_state(Ord.settings)
+            await message.answer("Введите необходимые настройки для печати")
+        else:
+            await message.answer("Ошибка: важность должна быть в диапазоне от 1 до 10. Пожалуйста, введите заново.")
+    except ValueError:
+        await message.answer("Ошибка: важность должна быть целым числом. Пожалуйста, введите заново.")
 
 
 @dp.message(Ord.settings)
@@ -110,8 +121,10 @@ async def ord_8(message: Message, state: FSMContext):
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
     await message.answer("/help - узнать список доступных команд\n\n"
-                         "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала в граммах>@<дата выполнения>@<степень важности от 1 до 10>@<настройки> - новый заказ\n"
-                         "Пример: /newoder Заказ 1@https://github.com/IvanIkra/PrintPlannerBot@ПЛА@100@16-01-2025@10@стандартные\n\n"
+                         "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала\
+                         в граммах>@<дата выполнения>@<степень важности от 1 до 10>@<настройки> - новый заказ\n"
+                         "Пример: /newoder Заказ 1@https://github.com/IvanIkra/PrintPlannerBot@ПЛА\
+                         @100@16-01-2025@10@стандартные\n\n"
                          "/matupdateadd <название материала>@<количество материала> - добавить материал\n\n"
                          "/matupdatesub <название материала>@<количество материала> - использовать материал\n\n"
                          "/addexp <категория>@<сумма>@<название> - добавить расход\n\n"
@@ -138,7 +151,8 @@ async def cmd_newoder(
     except Exception as e:
         await message.answer(
             "Ошибка: неправильный формат данных. Правильный формат:\n"
-            "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала>@<дата выполнения>@<степень важности от 1 до 10>@<настройки>"
+            "/newoder <имя заказа>@<ссылка на файл>@<название материала>\
+            @<количество материала>@<дата выполнения>@<степень важности от 1 до 10>@<настройки>"
         )
         print(e)
         return
