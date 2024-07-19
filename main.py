@@ -34,6 +34,10 @@ class Ord(StatesGroup):
     settings = State()
 
 
+class Payment(StatesGroup):
+    summ = State()
+
+
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     await message.answer(
@@ -82,7 +86,7 @@ async def ord_5(message: Message, state: FSMContext):
 @dp.message(Ord.recommended_date)
 async def ord_6(message: Message, state: FSMContext):
     try:
-        recommended_date = datetime.strptime(message.text, "%d-%m-%Y").date()
+        recommended_date = date.fromisoformat(message.text)
         await state.update_data(recommended_date=recommended_date)
         await state.set_state(Ord.importance)
         await message.answer("Введите важность заказа от 1 до 10 (целое число)")
@@ -114,7 +118,7 @@ async def ord_8(message: Message, state: FSMContext):
         f'Материал: {data["material"]}\n'
         f'Количество материала: {data["material_amount"]}\n'
         f'Дата выполнения: {data["recommended_date"]}\n'
-        f'Важность: {data["importance"]}\nНастройки: {data["settings"]}')
+        f'Важность: {data["importance"]}\nНастройки: {data["settings"]}', reply_markup=kb.keyboard_inline5)
     await state.clear()
 
 
@@ -308,7 +312,33 @@ async def make_order(callback: CallbackQuery, state: FSMContext):
 @dp.callback_query(F.data == 'menus')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к меню")
-    await callback.message.edit_text('Меню доступных команд:', reply_markup=kb.keyboard_inline1)
+    await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
+ Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
+
+
+@dp.callback_query(F.data == 'order_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления заказами")
+    await callback.message.edit_text('Ваши не выполненные заказы:', reply_markup=kb.keyboard_inline1)
+
+
+@dp.callback_query(F.data == 'back_menu')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к меню")
+    await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
+ Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
+
+
+@dp.callback_query(F.data == 'material_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления материалами")
+    await callback.message.edit_text('Материалы в наличии:', reply_markup=kb.keyboard_inline3)
+
+
+@dp.callback_query(F.data == 'finance_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления финансами")
+    await callback.message.edit_text('Финансы за последний месяц:', reply_markup=kb.keyboard_inline4)
 
 
 async def main():
