@@ -1,5 +1,7 @@
 import sqlite3
 import datetime
+from datetime import datetime, timedelta
+import pandas as pd
 
 
 def create_connection(db_file):
@@ -279,3 +281,66 @@ def get_all_materials(conn):
     except sqlite3.Error as e:
         print(f"Ошибка при извлечении данных: {e}")
         return []
+
+
+def get_all_materials_exel(conn, excel_path):
+    """Экспортировать данные из таблицы inventory в файл Excel"""
+    try:
+        # Создаем таблицу, если её нет
+        create_table(conn)
+
+        # Читаем данные из таблицы inventory
+        query = "SELECT * FROM inventory"
+        df = pd.read_sql_query(query, conn)
+
+        # Записываем данные в файл Excel
+        df.to_excel(excel_path, index=False)
+
+        print(f"Данные успешно экспортированы в {excel_path}")
+    except sqlite3.Error as e:
+        print(e)
+
+
+def get_last_month_date_range():
+    """Получить начало и конец последнего календарного месяца"""
+    today = datetime.today()
+    first_day_this_month = today.replace(day=1)
+    last_day_last_month = first_day_this_month - timedelta(days=1)
+    first_day_last_month = last_day_last_month.replace(day=1)
+    return first_day_last_month, last_day_last_month
+
+
+def export_last_month_data_to_excel(conn, excel_path):
+    """Экспортировать данные расходов и доходов за последний календарный месяц в один файл Excel"""
+    try:
+        # Создаем таблицы расходов и доходов, если их нет
+        create_expenses_table(conn)
+        create_revenue_table(conn)
+
+        # Получаем даты начала и конца последнего календарного месяца
+        start_date, end_date = get_last_month_date_range()
+
+        # Формируем SQL-запросы для извлечения данных
+        expenses_query = '''
+            SELECT * FROM expenses
+            WHERE date_spent BETWEEN ? AND ?
+        '''
+        revenue_query = '''
+            SELECT * FROM revenue
+            WHERE date_received BETWEEN ? AND ?
+        '''
+
+        # Выполняем запросы и читаем данные в DataFrame
+        expenses_df = pd.read_sql_query(expenses_query, conn,
+                                        params=(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
+        revenue_df = pd.read_sql_query(revenue_query, conn,
+                                       params=(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
+
+        # Записываем данные в разные листы одного файла Excel
+        with pd.ExcelWriter(excel_path) as writer:
+            expenses_df.to_excel(writer, sheet_name='Expenses', index=False)
+            revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
+
+        print(f"Данные расходов и доходов за последний календарный месяц успешно экспортированы в {excel_path}")
+    except sqlite3.Error as e:
+        print(e)
