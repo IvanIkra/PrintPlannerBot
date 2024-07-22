@@ -225,14 +225,13 @@ def get_last_month_date_range():
 def export_last_month_data_to_excel(conn, excel_path):
     """Экспортировать данные расходов и доходов за последний календарный месяц в один файл Excel"""
     try:
-        # Создаем таблицы расходов и доходов, если их нет
         create_expenses_table(conn)
         create_revenue_table(conn)
 
-        # Получаем даты начала и конца последнего календарного месяца
+
         start_date, end_date = get_last_month_date_range()
 
-        # Формируем SQL-запросы для извлечения данных
+
         expenses_query = '''
             SELECT * FROM expenses
             WHERE date_spent BETWEEN ? AND ?
@@ -242,13 +241,10 @@ def export_last_month_data_to_excel(conn, excel_path):
             WHERE date_received BETWEEN ? AND ?
         '''
 
-        # Выполняем запросы и читаем данные в DataFrame
         expenses_df = pd.read_sql_query(expenses_query, conn,
                                         params=(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
         revenue_df = pd.read_sql_query(revenue_query, conn,
                                        params=(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
-
-        # Записываем данные в разные листы одного файла Excel
         with pd.ExcelWriter(excel_path) as writer:
             expenses_df.to_excel(writer, sheet_name='Expenses', index=False)
             revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
