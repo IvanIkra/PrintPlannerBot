@@ -67,7 +67,7 @@ def create_revenue_table(conn):
         print(e)
 
 
-# Вы правда это читаете?(IvanIkra) - Да(s1ngul0r)
+# Вы правда это читаете?
 def create_orders_table(conn):
     """ Создать или обновить таблицу заказов в базе данных """
     try:
@@ -186,29 +186,6 @@ def add_revenue(conn, order_id, amount, date_received):
         print(e)
 
 
-def get_all_revenue(conn):
-    """ Получить все записи о доходах """
-    try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM revenue')
-        return cursor.fetchall()
-    except sqlite3.Error as e:
-        print(e)
-
-
-def get_orders_sorted_by(conn, sort_by='recommended_date'):
-    """ Получить список всех ID заказов, отсортированных по указанному критерию, включая дату или важность """
-    try:
-        cursor = conn.cursor()
-        if sort_by == 'importance':
-            cursor.execute('SELECT id, importance FROM orders ORDER BY importance DESC')
-        else:  # По умолчанию сортировка по recommended_date
-            cursor.execute('SELECT id, recommended_date FROM orders ORDER BY recommended_date')
-        return cursor.fetchall()
-    except sqlite3.Error as e:
-        print(e)
-
-
 def add_expense(conn, category, amount, date_spent, description):
     """ Добавить запись о расходах """
     try:
@@ -223,77 +200,12 @@ def add_expense(conn, category, amount, date_spent, description):
         print(e)
 
 
-def get_all_expenses(conn):
-    """ Получить все записи о расходах """
-    try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM expenses')
-        return cursor.fetchall()
-    except sqlite3.Error as e:
-        print(e)
-
-
-def get_financial_summary(conn):
-    """ Получить сводку финансов за текущий календарный месяц и за все время """
-    try:
-        cursor = conn.cursor()
-        today = datetime.date.today()
-        first_day_of_current_month = today.replace(day=1)
-        next_month = first_day_of_current_month.replace(day=28) + datetime.timedelta(
-            days=4)
-        first_day_of_next_month = next_month.replace(day=1)
-        cursor.execute('''
-            SELECT
-                (SELECT IFNULL(SUM(amount), 0) FROM revenue WHERE date_received >= ? AND date_received < ?) AS revenue_current_month,
-                (SELECT IFNULL(SUM(amount), 0) FROM expenses WHERE date_spent >= ? AND date_spent < ?) AS expenses_current_month
-            ''', (
-            first_day_of_current_month, first_day_of_next_month, first_day_of_current_month, first_day_of_next_month))
-        current_month_data = cursor.fetchone()
-        cursor.execute('''
-            SELECT
-                (SELECT IFNULL(SUM(amount), 0) FROM revenue) AS total_revenue,
-                (SELECT IFNULL(SUM(amount), 0) FROM expenses) AS total_expenses
-            ''')
-        total_data = cursor.fetchone()
-        summary = {
-            'current_month': {
-                'revenue': current_month_data[0],
-                'expenses': current_month_data[1]
-            },
-            'total': {
-                'revenue': total_data[0],
-                'expenses': total_data[1]
-            }
-        }
-        return summary
-    except sqlite3.Error as e:
-        print(e)
-        return None
-
-
-def get_all_materials(conn):
-    """ Получить список всех материалов с их количествами """
-    try:
-        cursor = conn.cursor()
-        cursor.execute('SELECT * FROM inventory')
-        materials = cursor.fetchall()
-        return materials
-    except sqlite3.Error as e:
-        print(f"Ошибка при извлечении данных: {e}")
-        return []
-
-
 def get_all_materials_exel(conn, excel_path):
     """Экспортировать данные из таблицы inventory в файл Excel"""
     try:
-        # Создаем таблицу, если её нет
         create_table(conn)
-
-        # Читаем данные из таблицы inventory
         query = "SELECT * FROM inventory"
         df = pd.read_sql_query(query, conn)
-
-        # Записываем данные в файл Excel
         df.to_excel(excel_path, index=False)
 
         print(f"Данные успешно экспортированы в {excel_path}")

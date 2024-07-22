@@ -1,56 +1,79 @@
-**Этот файл представляет собой гайд по использованию функций из `db_manage.py`**
+**Этот файл представляет собой гайд по использованию важных функций из `db_manage.py`**
 
-1. **create_connection(db_file)**
-    - **Описание**: Создает соединение с базой данных SQLite, указанной в `db_file`.
+1. **update_material(conn, material_name, amount, operation)**
+    - **Описание**: Обновляет количество материала в базе данных
     - **Использование**: 
       ```python
-      conn = create_connection('example.db')
+      update_material(conn, пла, 700, add)
+      update_material(conn, пла, 700, subtract)
       ```
     - **Параметры**: 
-      - `db_file` (str): Имя файла базы данных SQLite.
-    - **Возвращает**: Объект соединения с базой данных SQLite.
+      - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
+      - `material_name` (str): Имя материала
+      - `amount` (int): Количество материала в граммах.
+      - `operation` (str): Операция: добавить(add) / вычесть(subtract)
+    - **Возвращает**: Обновленное количество материала в граммах.
 
-2. **create_expenses_table(conn)**
-    - **Описание**: Создает таблицу для учета расходов в базе данных.
+2. **add_order(conn, name, link, material, material_amount, recommended_date, importance, settings, cost, payment_info,
+              done, creation_date)**
+    - **Описание**: Создает новый заказ в базе данных.
     - **Использование**: 
       ```python
-      create_expenses_table(conn)
+      add_order(conn, 'order', 'https://github.com/IvanIkra/PrintPlannerBot/blob/ikra', 'pla', 300, '22.07.2024', 3, 'standart', 1200, False,
+              False, '22.07.2024')
+      ```
+    - **Параметры**: 
+      - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
+      - `name` (str): Имя заказа.
+      - `link` (str): Ссылка на 3д модель (google disk)
+      - `material` (str): Материал.
+      - `material_amount` (int): Количество материала в граммах.
+      - `recommended_date` (str): Дата, к которой нужно выполнить заказ.
+      - `importance` (int): Важность заказа (от 1 до 10).
+      - `settings` (str): Настройки печати.
+      - `cost` (int): Стоимость.
+      - `payment_info` (bool): Был ли заказ оплачен.
+      - `done` (bool): Выполнен ли заказ.
+      - `creation_date` (str): Дата создания заказа.
+    - **Возвращает**: ID заказа, который система выдает автоматически.
+
+3. **delete_unpaid_orders(conn)**
+    - **Описание**: Удаляет заказы, которые не были оплачены в течение 10 дней после создания.
+    - **Использование**: 
+      ```python
+      delete_unpaid_orders(conn)
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
 
-3. **create_table(conn)**
-    - **Описание**: Создает таблицу для инвентаризации материалов в базе данных.
+
+4. **get_order_by_id(conn, order_id)**
+    - **Описание**: Выводит всю информацию о заказе по ID.
     - **Использование**: 
       ```python
-      create_table(conn)
+      get_order_by_id(conn, 21)
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
+      - `order_id` (int): ID заказа.
+    - **Возвращает**: Все данные заказа.
+      
 
-4. **create_revenue_table(conn)**
-    - **Описание**: Создает таблицу для учета доходов в базе данных.
+5. **delete_order(conn, order_id)**
+    - **Описание**: Удаляет заказ с заданным ID.
     - **Использование**: 
       ```python
-      create_revenue_table(conn)
+      delete_order(conn, 21)
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
+      - `order_id` (int): ID заказа.
 
-5. **create_orders_table(conn)**
-    - **Описание**: Создает или обновляет таблицу заказов в базе данных.
-    - **Использование**: 
-      ```python
-      create_orders_table(conn)
-      ```
-    - **Параметры**: 
-      - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
-
-6. **insert_expense(conn, category, amount, date_spent, description)**
+6. **add_expense(conn, category, amount, date_spent, description)**
     - **Описание**: Вставляет запись о расходе в таблицу расходов.
     - **Использование**: 
       ```python
-      insert_expense(conn, 'Food', 50.0, '2023-07-01', 'Groceries')
+      add_expense(conn, 'Food', 50.0, '2023-07-01', 'Groceries')
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
@@ -59,11 +82,11 @@
       - `date_spent` (str): Дата, когда был совершен расход.
       - `description` (str): Описание расхода.
 
-7. **insert_revenue(conn, order_id, amount, date_received)**
+7. **add_revenue(conn, order_id, amount, date_received)**
     - **Описание**: Вставляет запись о доходе в таблицу доходов.
     - **Использование**: 
       ```python
-      insert_revenue(conn, 1, 100.0, '2023-07-01')
+      add_revenue(conn, 1, 100.0, '2023-07-01')
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
@@ -71,37 +94,18 @@
       - `amount` (float): Сумма дохода.
       - `date_received` (str): Дата получения дохода.
 
-8. **get_expenses_by_category(conn, category)**
-    - **Описание**: Извлекает расходы из базы данных по заданной категории.
+8. **get_all_materials_exel(conn, excel_path)**
+    - **Описание**: Создает таблицу Exel с наличием материалов по заданному адресу.
     - **Использование**: 
       ```python
-      expenses = get_expenses_by_category(conn, 'Food')
+      get_all_materials_exel(conn, 'data.xlsx')
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
-      - `category` (str): Категория расходов для извлечения.
+      - `excel_path` (str): Адрес, по которому будет создан файл.
     - **Возвращает**: Список записей о расходах для указанной категории.
 
-9. **get_revenue_by_order_id(conn, order_id)**
-    - **Описание**: Извлекает доходы из базы данных по заданному ID заказа.
-    - **Использование**: 
-      ```python
-      revenue = get_revenue_by_order_id(conn, 1)
-      ```
-    - **Параметры**: 
-      - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
-      - `order_id` (int): ID заказа.
-    - **Возвращает**: Список записей о доходах для указанного ID заказа.
-
-10. **get_last_month_date_range()**
-    - **Описание**: Получает даты начала и конца последнего календарного месяца.
-    - **Использование**: 
-      ```python
-      start_date, end_date = get_last_month_date_range()
-      ```
-    - **Возвращает**: Кортеж, содержащий даты начала и конца последнего календарного месяца.
-
-11. **export_last_month_data_to_excel(conn, excel_path)**
+9. **export_last_month_data_to_excel(conn, excel_path)**
     - **Описание**: Экспортирует данные расходов и доходов за последний календарный месяц в файл Excel.
     - **Использование**: 
       ```python
@@ -109,4 +113,4 @@
       ```
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
-      - `excel_path` (str): Путь к файлу Excel, в который будут экспортированы данные.
+      - `excel_path` (str): Адрес, по которому будет создан файл.
