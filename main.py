@@ -38,7 +38,7 @@ class Payment(StatesGroup):
     summ = State()
 
 
-@dp.message(Command("start"))
+@dp.message(Command("menu"))
 async def cmd_start(message: types.Message):
     await message.answer(
         "👋 Вас приветствует команда разработчиков Binary Brigade."
