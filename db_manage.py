@@ -253,18 +253,84 @@ def export_last_month_data_to_excel(conn, excel_path):
 
 
 def export_orders_to_excel(conn, excel_path, done=True):
-    """Экспортировать данные заказов в файл Excel"""
     try:
-        create_orders_table(conn)
         query = '''
             SELECT * FROM orders
             WHERE done = ?
+            ORDER BY recommended_date, importance DESC
         '''
 
         df = pd.read_sql_query(query, conn, params=(int(done),))
+
         sheet_name = 'Completed Orders' if done else 'Pending Orders'
         df.to_excel(excel_path, sheet_name=sheet_name, index=False)
 
         print(f"Данные заказов ({sheet_name}) успешно экспортированы в {excel_path}")
+    except sqlite3.Error as e:
+        print(e)
+
+
+def export_expenses_and_revenue_between_dates_to_excel(conn, start_date, end_date, excel_path):
+    """Получить расходы и доходы между указанными датами и сохранить их в Excel"""
+    try:
+        cursor = conn.cursor()
+
+        expenses_query = "SELECT * FROM expenses WHERE date_spent BETWEEN ? AND ?"
+        expenses_df = pd.read_sql_query(expenses_query, conn, params=(start_date, end_date))
+
+        revenue_query = "SELECT * FROM revenue WHERE date_received BETWEEN ? AND ?"
+        revenue_df = pd.read_sql_query(revenue_query, conn, params=(start_date, end_date))
+
+        with pd.ExcelWriter(excel_path) as writer:
+            expenses_df.to_excel(writer, sheet_name='Expenses', index=False)
+            revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
+
+        print(f"Данные расходов и доходов за период с {start_date} по {end_date} успешно экспортированы в {excel_path}")
+    except sqlite3.Error as e:
+        print(e)
+
+
+def auto_delite_expired_records(conn, table, date_column, days):
+    """Удалить записи из указанной таблицы, которые старше определенного количества дней"""
+    try:
+        cursor = conn.cursor()
+        cutoff_date = datetime.now() - timedelta(days=days)
+        cutoff_date_str = cutoff_date.strftime('%Y-%m-%d')
+        cursor.execute(f"DELETE FROM {table} WHERE {date_column} <= ?", (cutoff_date_str,))
+        conn.commit()
+        print(f"Записи старше {cutoff_date_str} удалены из таблицы {table}")
+    except sqlite3.Error as e:
+        print(e)
+
+
+def get_material_by_name(conn, material_name):
+    """Получить информацию о материале по названию"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute('SELECT * FROM inventory WHERE material_name = ?', (material_name,))
+        return cursor.fetchone()
+    except sqlite3.Error as e:
+        print(e)
+
+
+def get_expenses_by_category(conn, category, excel_path):
+    """Получить список расходов по категории и экспортировать в Excel"""
+    try:
+        cursor = conn.cursor()
+        query = 'SELECT * FROM expenses WHERE category = ?'
+        df = pd.read_sql_query(query, conn, params=(category,))
+        df.to_excel(excel_path, index=False)
+        print(f"Данные расходов по категории '{category}' успешно экспортированы в {excel_path}")
+    except sqlite3.Error as e:
+        print(e)
+
+
+def update_order_status(conn, order_id, done):
+    """Обновить статус заказа по ID"""
+    try:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE orders SET done = ? WHERE id = ?', (done, order_id))
+        conn.commit()
+        return 'Статус заказа обновлен'
     except sqlite3.Error as e:
         print(e)
