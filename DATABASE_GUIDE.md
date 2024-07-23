@@ -114,3 +114,15 @@
     - **Параметры**: 
       - `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
       - `excel_path` (str): Адрес, по которому будет создан файл.
+
+10. **export_orders_to_excel(conn, excel_path, done=True)**
+
+* **Описание**: Экспортирует данные заказов (готовые или неготовые) в файл Excel.
+* **Использование**:
+  ```python
+  export_orders_to_excel(conn, 'orders.xlsx', done=True)
+  ```
+* **Параметры**:
+  * `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
+  * `excel_path` (str): Адрес, по которому будет создан файл.
+  * `done` (bool, опционально): Флаг, указывающий, нужно ли экспортировать готовые заказы (`True`) или неготовые (`False`). По умолчанию `True`.

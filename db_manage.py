@@ -228,9 +228,7 @@ def export_last_month_data_to_excel(conn, excel_path):
         create_expenses_table(conn)
         create_revenue_table(conn)
 
-
         start_date, end_date = get_last_month_date_range()
-
 
         expenses_query = '''
             SELECT * FROM expenses
@@ -250,5 +248,23 @@ def export_last_month_data_to_excel(conn, excel_path):
             revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
 
         print(f"Данные расходов и доходов за последний календарный месяц успешно экспортированы в {excel_path}")
+    except sqlite3.Error as e:
+        print(e)
+
+
+def export_orders_to_excel(conn, excel_path, done=True):
+    """Экспортировать данные заказов в файл Excel"""
+    try:
+        create_orders_table(conn)
+        query = '''
+            SELECT * FROM orders
+            WHERE done = ?
+        '''
+
+        df = pd.read_sql_query(query, conn, params=(int(done),))
+        sheet_name = 'Completed Orders' if done else 'Pending Orders'
+        df.to_excel(excel_path, sheet_name=sheet_name, index=False)
+
+        print(f"Данные заказов ({sheet_name}) успешно экспортированы в {excel_path}")
     except sqlite3.Error as e:
         print(e)
