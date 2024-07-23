@@ -182,18 +182,14 @@
   * `end_date` (str): Конечная дата в формате 'YYYY-MM-DD'.
   * `excel_path` (str): Адрес, по которому будет создан файл.
 
-#### `auto_delite_expired_records(conn, table, date_column, days)`
-* **Описание**: Удалить записи из указанной таблицы, которые старше определенного количества дней.
+#### `auto_delite_expired_records(conn, days)`
+* **Описание**: Удалить записи, которые старше определенного количества дней.
 * **Использование**:
   ```python
-  auto_delite_expired_records(conn, 'orders', 'creation_date', 30)
+  auto_delite_expired_records(conn, 30)
   ```
 * **Параметры**:
   * `conn` (sqlite3.Connection): Объект соединения с базой данных SQLite.
-  * `table`
-
- (str): Название таблицы.
-  * `date_column` (str): Название столбца с датой.
   * `days` (int): Количество дней, после которых записи считаются устаревшими.
 
 #### `get_material_by_name(conn, material_name)`

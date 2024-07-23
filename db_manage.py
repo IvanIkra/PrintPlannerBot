@@ -290,15 +290,15 @@ def export_expenses_and_revenue_between_dates_to_excel(conn, start_date, end_dat
         print(e)
 
 
-def auto_delite_expired_records(conn, table, date_column, days):
+def auto_delite_expired_records(conn, days):
     """Удалить записи из указанной таблицы, которые старше определенного количества дней"""
     try:
         cursor = conn.cursor()
         cutoff_date = datetime.now() - timedelta(days=days)
         cutoff_date_str = cutoff_date.strftime('%Y-%m-%d')
-        cursor.execute(f"DELETE FROM {table} WHERE {date_column} <= ?", (cutoff_date_str,))
+        cursor.execute(f"DELETE FROM {'orders'} WHERE {'creation_date'} <= ?", (cutoff_date_str,))
         conn.commit()
-        print(f"Записи старше {cutoff_date_str} удалены из таблицы {table}")
+        print(f"Записи старше {cutoff_date_str} удалены из таблицы {'orders'}")
     except sqlite3.Error as e:
         print(e)
 
