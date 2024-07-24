@@ -168,11 +168,14 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_order_by_id(self, order_id):
+    def get_order(self, info, key='id'):
         """Получить информацию о заказе по ID"""
         try:
             cursor = self.conn.cursor()
-            cursor.execute('SELECT * FROM orders WHERE id = ?', (order_id,))
+            if key == 'id':
+                cursor.execute('SELECT * FROM orders WHERE id = ?', (info,))
+            else:
+                cursor.execute('SELECT * FROM orders WHERE name = ?', (info,))
             return cursor.fetchone()
         except sqlite3.Error as e:
             print(e)

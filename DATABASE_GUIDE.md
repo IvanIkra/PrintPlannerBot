@@ -8,7 +8,7 @@
 db_manager = DatabaseManager('example.db')
 ```
 #### Параметры:
-- `db_file`: Имя файла базы данных SQLite.
+- `db_file: str`: Имя файла базы данных SQLite.
 
 ### `create_connection(self, db_file)`
 #### Описание:
@@ -30,9 +30,9 @@ db_manager = DatabaseManager('example.db')
 db_manager.update_material('Steel', 50, 'add')
 ```
 #### Параметры:
-- `material_name`: Название материала.
-- `amount`: Количество для обновления.
-- `operation`: Операция (`'add'` или `'subtract'`).
+- `material_name: str`: Название материала.
+- `amount: int`: Количество для обновления.
+- `operation: str`: Операция (`'add'` или `'subtract'`).
 #### Возвращает:
 - Новое количество материала в случае успеха, `-1` если недостаточно материала для вычитания, `0` в случае ошибки.
 
@@ -44,17 +44,17 @@ db_manager.update_material('Steel', 50, 'add')
 db_manager.add_order('Order1', 'http://link.com', 'Steel', 10, '2024-12-01', 1, 'Settings', 100.0, True, False, '2024-07-01')
 ```
 #### Параметры:
-- `name`: Имя заказа.
-- `link`: Ссылка на заказ.
-- `material`: Материал заказа.
-- `material_amount`: Количество материала.
-- `recommended_date`: Рекомендованная дата.
-- `importance`: Важность заказа.
-- `settings`: Настройки заказа.
-- `cost`: Стоимость заказа.
-- `payment_info`: Информация об оплате.
-- `done`: Статус выполнения заказа.
-- `creation_date`: Дата создания заказа.
+- `name: str`: Имя заказа.
+- `link: str`: Ссылка на заказ.
+- `material: str`: Материал заказа.
+- `material_amount: int`: Количество материала.
+- `recommended_date: str`: Рекомендованная дата.
+- `importance: int`: Важность заказа.
+- `settings: str`: Настройки заказа.
+- `cost: float`: Стоимость заказа.
+- `payment_info: bool`: Информация об оплате.
+- `done: bool`: Статус выполнения заказа.
+- `creation_date: str`: Дата создания заказа.
 #### Возвращает:
 - ID добавленного заказа в случае успеха, `-1` в случае ошибки.
 
@@ -68,15 +68,16 @@ db_manager.delete_unpaid_orders()
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
-### `get_order_by_id(self, order_id)`
+### `get_order(self, info, key = 'id')`
 #### Описание:
 Получает информацию о заказе по ID.
 #### Использование:
 ```python
-order = db_manager.get_order_by_id(1)
+order = db_manager.get_order(1)
 ```
 #### Параметры:
-- `order_id`: ID заказа.
+- `info: int, str`: ID или имя заказа.
+- `key: str` : Ключ поиска, 'id' - поиск по ID, 'name' - поиск по имени заказа.
 #### Возвращает:
 - Запись заказа в случае успеха, `0` в случае ошибки.
 
@@ -88,7 +89,7 @@ order = db_manager.get_order_by_id(1)
 db_manager.delete_order(1)
 ```
 #### Параметры:
-- `order_id`: ID заказа.
+- `order_id: int`: ID заказа.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -100,13 +101,13 @@ db_manager.delete_order(1)
 db_manager.add_revenue(1, 100.0, '2024-07-01')
 ```
 #### Параметры:
-- `order_id`: ID заказа.
-- `amount`: Сумма дохода.
-- `date_received`: Дата получения дохода.
+- `order_id: int`: ID заказа.
+- `amount: float`: Сумма дохода.
+- `date_received: str`: Дата получения дохода.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
-### `add_expense(self, category, amount, date_spent, description)`
+### `add_expense(self, category: str, amount, date_spent, description)`
 #### Описание:
 Добавляет запись о расходах.
 #### Использование:
@@ -114,10 +115,10 @@ db_manager.add_revenue(1, 100.0, '2024-07-01')
 db_manager.add_expense('Office Supplies', 50.0, '2024-07-01', 'Bought pens and paper')
 ```
 #### Параметры:
-- `category`: Категория расходов.
-- `amount`: Сумма расходов.
-- `date_spent`: Дата расходов.
-- `description`: Описание расходов.
+- `category: str`: Категория расходов.
+- `amount: float`: Сумма расходов.
+- `date_spent: str`: Дата расходов.
+- `description: str`: Описание расходов.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -129,7 +130,7 @@ db_manager.add_expense('Office Supplies', 50.0, '2024-07-01', 'Bought pens and p
 db_manager.get_all_materials_excel('materials.xlsx')
 ```
 #### Параметры:
-- `excel_path`: Путь к файлу Excel.
+- `excel_path: str`: Путь к файлу Excel.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -151,11 +152,11 @@ start_date, end_date = db_manager.get_last_month_date_range()
 db_manager.export_last_month_data_to_excel('last_month_data.xlsx')
 ```
 #### Параметры:
-- `excel_path`: Путь к файлу Excel.
+- `excel_path: str`: Путь к файлу Excel.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
-### `export_orders_to_excel(self, excel_path, done=True)`
+### `export_orders_to_excel(self, excel_path, done = True)`
 #### Описание:
 Экспортирует данные заказов в файл Excel.
 #### Использование:
@@ -163,8 +164,8 @@ db_manager.export_last_month_data_to_excel('last_month_data.xlsx')
 db_manager.export_orders_to_excel('orders.xlsx', False)
 ```
 #### Параметры:
-- `excel_path`: Путь к файлу Excel.
-- `done`: Статус выполнения заказа, по умолчанию True (`True` для выполненных, `False` для невыполненных).
+- `excel_path: str`: Путь к файлу Excel.
+- `done: bool`: Статус выполнения заказа, по умолчанию True (`True` для выполненных, `False` для невыполненных).
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -176,9 +177,9 @@ db_manager.export_orders_to_excel('orders.xlsx', False)
 db_manager.export_expenses_and_revenue_between_dates_to_excel('2024-06-01', '2024-06-30', 'expenses_revenue.xlsx')
 ```
 #### Параметры:
-- `start_date`: Начальная дата.
-- `end_date`: Конечная дата.
-- `excel_path`: Путь к файлу Excel.
+- `start_date: str`: Начальная дата.
+- `end_date: str`: Конечная дата.
+- `excel_path: str`: Путь к файлу Excel.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -190,7 +191,7 @@ db_manager.export_expenses_and_revenue_between_dates_to_excel('2024-06-01', '202
 db_manager.auto_delete_expired_records(30)
 ```
 #### Параметры:
-- `days`: Количество дней для проверки.
+- `days: int`: Количество дней для проверки.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -202,7 +203,7 @@ db_manager.auto_delete_expired_records(30)
 material = db_manager.get_material_by_name('Steel')
 ```
 #### Параметры:
-- `material_name`: Название материала.
+- `material_name: str`: Название материала.
 #### Возвращает:
 - Запись материала в случае успеха, `0` в случае ошибки.
 
@@ -214,10 +215,8 @@ material = db_manager.get_material_by_name('Steel')
 db_manager.get_expenses_by_category('Office Supplies', 'office_supplies_expenses.xlsx')
 ```
 #### Параметры:
-- `category`: Категория расходов.
--
-
- `excel_path`: Путь к файлу Excel.
+- `category: str`: Категория расходов.
+- `excel_path: str`: Путь к файлу Excel.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -229,8 +228,8 @@ db_manager.get_expenses_by_category('Office Supplies', 'office_supplies_expenses
 db_manager.update_order_status(1, True)
 ```
 #### Параметры:
-- `order_id`: ID заказа.
-- `done`: Статус выполнения заказа (`True` для выполненного, `False` для невыполненного).
+- `order_id: int`: ID заказа.
+- `done: bool`: Статус выполнения заказа (`True` для выполненного, `False` для невыполненного).
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -243,7 +242,6 @@ db_manager.close_connection()
 ```
 #### Возвращает:
 - `1` в случае успеха.
-
 
 
 # !ВАЖНО!
