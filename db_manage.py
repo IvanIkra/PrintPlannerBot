@@ -150,7 +150,7 @@ class DatabaseManager:
             return cursor.lastrowid
         except sqlite3.Error as e:
             print(e)
-            return 0
+            return -1
 
     def delete_unpaid_orders(self):
         """Удалить заказы, которые не были оплачены в течение 10 дней после создания"""
