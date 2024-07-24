@@ -287,14 +287,57 @@ async def cmd_url(
 @dp.callback_query(F.data == 'make_order')
 async def make_order(callback: CallbackQuery, state: FSMContext):
     await callback.answer("Переход к созданию заказа")
-    await callback.message.edit_text("Введите название заказа")
+    await callback.message.edit_text("Введите название заказа",
+                                     reply_markup=kb.keyboard_inline6)
     await state.set_state(Ord.name)
 
 
 @dp.callback_query(F.data == 'menus')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к меню")
+<<<<<<< Updated upstream
     await callback.message.edit_text('Меню доступных команд:', reply_markup=kb.keyboard_inline1)
+=======
+    await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
+ Выберите нужный вам пункт меню.',
+                                     reply_markup=kb.keyboard_inline_main_menu)
+
+
+@dp.callback_query(F.data == 'order_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления заказами")
+    await callback.message.edit_text('Ваши не выполненные заказы:',
+                                     reply_markup=kb.keyboard_inline1)
+
+
+@dp.callback_query(F.data == 'back_menu')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к меню")
+    await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
+ Выберите нужный вам пункт меню.',
+                                     reply_markup=kb.keyboard_inline_main_menu)
+
+
+@dp.callback_query(F.data == 'cancel_order_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления заказами")
+    await callback.message.edit_text('Ваши не выполненные заказы:',
+                                     reply_markup=kb.keyboard_inline1)
+
+
+@dp.callback_query(F.data == 'material_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления материалами")
+    await callback.message.edit_text('Материалы в наличии:',
+                                     reply_markup=kb.keyboard_inline3)
+
+
+@dp.callback_query(F.data == 'finance_manage')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к панели управления финансами")
+    await callback.message.edit_text('Финансы за последний месяц:',
+                                     reply_markup=kb.keyboard_inline4)
+>>>>>>> Stashed changes
 
 
 async def main():
