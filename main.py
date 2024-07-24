@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command, Message, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, CallbackQuery
+from aiogram.types import CallbackQuery
 
 import keyboards as kb
 from config_reader import config
@@ -23,10 +23,6 @@ create_orders_table(conn)  # Создание таблицы заказов
 create_revenue_table(conn)  # Создание таблицы доходов
 create_expenses_table(conn)  # Создание таблицы расходов
 
-keyboard1 = ReplyKeyboardMarkup(keyboard=[[KeyboardButton(text="⛑️Помощь")]],
-                                resize_keyboard=True,
-                                input_field_placeholder="Выберете пункт меню")  # Создание блок-клавиатуры
-
 
 class Ord(StatesGroup):
     name = State()
@@ -36,6 +32,10 @@ class Ord(StatesGroup):
     recommended_date = State()
     importance = State()
     settings = State()
+
+
+class Payment(StatesGroup):
+    summ = State()
 
 
 @dp.message(Command("start"))
@@ -48,49 +48,75 @@ async def cmd_start(message: types.Message):
 @dp.message(Command("newoder"))
 async def ord_1(message: Message, state: FSMContext):
     await state.set_state(Ord.name)
-    await message.answer("Введите название заказа")
+    await message.answer("Введите название заказа",
+                         reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.name)
 async def ord_2(message: Message, state: FSMContext):
     await state.update_data(name=message.text)
     await state.set_state(Ord.link)
-    await message.answer("Введите ссылку на 3D модель")
+    await message.answer("Введите ссылку на 3D модель",
+                         reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.link)
 async def ord_3(message: Message, state: FSMContext):
     await state.update_data(link=message.text)
     await state.set_state(Ord.material)
-    await message.answer("Введите название используемого материала")
+    await message.answer("Введите название используемого материала",
+                         reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.material)
 async def ord_4(message: Message, state: FSMContext):
     await state.update_data(material=message.text)
     await state.set_state(Ord.material_amount)
-    await message.answer("Введите количество(в граммах) используемого материала")
+    await message.answer("Введите количество(в граммах) используемого материала (целое число)",
+                         reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.material_amount)
 async def ord_5(message: Message, state: FSMContext):
-    await state.update_data(material_amount=message.text)
-    await state.set_state(Ord.recommended_date)
-    await message.answer("Введите дату выполнения")
+    try:
+        material_amount = int(message.text)
+        await state.update_data(material_amount=material_amount)
+        await state.set_state(Ord.recommended_date)
+        await message.answer("Введите дату выполнения (в формате ГГГГ-ММ-ДД)",
+                             reply_markup=kb.keyboard_inline6)
+    except ValueError:
+        await message.answer("Ошибка: количество материала должно быть целым числом. Пожалуйста, введите заново.",
+                             reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.recommended_date)
 async def ord_6(message: Message, state: FSMContext):
-    await state.update_data(recommended_date=message.text)
-    await state.set_state(Ord.importance)
-    await message.answer("Введите важность заказа от 1 до 10")
+    try:
+        recommended_date = date.fromisoformat(message.text)
+        await state.update_data(recommended_date=recommended_date)
+        await state.set_state(Ord.importance)
+        await message.answer("Введите важность заказа от 1 до 10 (целое число)",
+                             reply_markup=kb.keyboard_inline6)
+    except ValueError:
+        await message.answer("Ошибка: дата должна быть в формате ГГГГ-ММ-ДД. Пожалуйста, введите заново.",
+                             reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.importance)
 async def ord_7(message: Message, state: FSMContext):
-    await state.update_data(importance=message.text)
-    await state.set_state(Ord.settings)
-    await message.answer("Введите необходимые настройки для печати")
+    try:
+        importance = int(message.text)
+        if 1 <= importance <= 10:
+            await state.update_data(importance=importance)
+            await state.set_state(Ord.settings)
+            await message.answer("Введите необходимые настройки для печати",
+                                 reply_markup=kb.keyboard_inline6)
+        else:
+            await message.answer("Ошибка: важность должна быть в диапазоне от 1 до 10. Пожалуйста, введите заново.",
+                                 reply_markup=kb.keyboard_inline6)
+    except ValueError:
+        await message.answer("Ошибка: важность должна быть целым числом. Пожалуйста, введите заново.",
+                             reply_markup=kb.keyboard_inline6)
 
 
 @dp.message(Ord.settings)
@@ -98,20 +124,51 @@ async def ord_8(message: Message, state: FSMContext):
     await state.update_data(settings=message.text)
     data = await state.get_data()
     await message.answer(
-        f'Вы хотите создать заказ с данными\nИмя заказа: {data["name"]}\n'
+        f'Имя заказа: {data["name"]}\n'
         f'Ссылка на 3D модель: {data["link"]}\n'
         f'Материал: {data["material"]}\n'
         f'Количество материала: {data["material_amount"]}\n'
         f'Дата выполнения: {data["recommended_date"]}\n'
-        f'Важность: {data["importance"]}\nНастройки: {data["settings"]}')
+        f'Важность: {data["importance"]}\nНастройки: {data["settings"]}'
+        f'\n\n*Вы хотите создать заказ с этими данными?*', reply_markup=kb.keyboard_inline5, parse_mode="Markdown")
+
+    @dp.callback_query(F.data == 'no_makeorder')
+    async def no_makeorder(callback: CallbackQuery):
+        await callback.answer("Отмена создания заказа")
+        await callback.message.edit_text(f'Заказ *{data["name"]}* не создан',
+                                         reply_markup=kb.keyboard_inline7, parse_mode="Markdown")
+
+    @dp.callback_query(F.data == 'yes_makeorder')
+    async def yes_makeorder(callback: CallbackQuery):
+        await callback.answer("Продоложение создания заказа")
+        await callback.message.edit_text(f'Заказ *{data["name"]}* был создан, его id *<id>*,\
+         мы рекомендуем присвоить ему стоимость *<стоимость>* руб',
+                                         reply_markup=kb.keyboard_inline8, parse_mode="Markdown")
+
+    @dp.callback_query(F.data == 'our_price_makeorder')
+    async def no_makeorder(callback: CallbackQuery):
+        await callback.answer("Готово")
+        await callback.message.edit_text(f'Готово! Вы можете вернуться к меню',
+                                         reply_markup=kb.keyboard_inline7, parse_mode="Markdown")
+
+    @dp.callback_query(F.data == 'custom_price_makeorder')
+    async def no_makeorder(callback: CallbackQuery):
+        await callback.answer("Переход к вводу стоимости")
+        await callback.message.answer("Введите стоимость")
+        # Ввод стоимости
+        await callback.message.edit_text(f'Готово! Вы можете вернуться к меню',
+                                         reply_markup=kb.keyboard_inline7)
+
     await state.clear()
 
 
 @dp.message(Command("help"))
 async def cmd_help(message: types.Message):
     await message.answer("/help - узнать список доступных команд\n\n"
-                         "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала в граммах>@<дата выполнения>@<степень важности от 1 до 10>@<настройки> - новый заказ\n"
-                         "Пример: /newoder Заказ 1@https://github.com/IvanIkra/PrintPlannerBot@ПЛА@100@16-01-2025@10@стандартные\n\n"
+                         "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала\
+                         в граммах>@<дата выполнения>@<степень важности от 1 до 10>@<настройки> - новый заказ\n"
+                         "Пример: /newoder Заказ 1@https://github.com/IvanIkra/PrintPlannerBot@ПЛА\
+                         @100@16-01-2025@10@стандартные\n\n"
                          "/matupdateadd <название материала>@<количество материала> - добавить материал\n\n"
                          "/matupdatesub <название материала>@<количество материала> - использовать материал\n\n"
                          "/addexp <категория>@<сумма>@<название> - добавить расход\n\n"
@@ -138,7 +195,8 @@ async def cmd_newoder(
     except Exception as e:
         await message.answer(
             "Ошибка: неправильный формат данных. Правильный формат:\n"
-            "/newoder <имя заказа>@<ссылка на файл>@<название материала>@<количество материала>@<дата выполнения>@<степень важности от 1 до 10>@<настройки>"
+            "/newoder <имя заказа>@<ссылка на файл>@<название материала>\
+            @<количество материала>@<дата выполнения>@<степень важности от 1 до 10>@<настройки>"
         )
         print(e)
         return
@@ -287,57 +345,46 @@ async def cmd_url(
 @dp.callback_query(F.data == 'make_order')
 async def make_order(callback: CallbackQuery, state: FSMContext):
     await callback.answer("Переход к созданию заказа")
-    await callback.message.edit_text("Введите название заказа",
-                                     reply_markup=kb.keyboard_inline6)
+    await callback.message.edit_text("Введите название заказа")
     await state.set_state(Ord.name)
 
 
 @dp.callback_query(F.data == 'menus')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к меню")
-<<<<<<< Updated upstream
-    await callback.message.edit_text('Меню доступных команд:', reply_markup=kb.keyboard_inline1)
-=======
     await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
- Выберите нужный вам пункт меню.',
-                                     reply_markup=kb.keyboard_inline_main_menu)
+ Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
 
 
 @dp.callback_query(F.data == 'order_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления заказами")
-    await callback.message.edit_text('Ваши не выполненные заказы:',
-                                     reply_markup=kb.keyboard_inline1)
+    await callback.message.edit_text('Ваши не выполненные заказы:', reply_markup=kb.keyboard_inline1)
 
 
 @dp.callback_query(F.data == 'back_menu')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к меню")
     await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
- Выберите нужный вам пункт меню.',
-                                     reply_markup=kb.keyboard_inline_main_menu)
+ Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
 
 
 @dp.callback_query(F.data == 'cancel_order_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления заказами")
-    await callback.message.edit_text('Ваши не выполненные заказы:',
-                                     reply_markup=kb.keyboard_inline1)
+    await callback.message.edit_text('Ваши не выполненные заказы:', reply_markup=kb.keyboard_inline1)
 
 
 @dp.callback_query(F.data == 'material_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления материалами")
-    await callback.message.edit_text('Материалы в наличии:',
-                                     reply_markup=kb.keyboard_inline3)
+    await callback.message.edit_text('Материалы в наличии:', reply_markup=kb.keyboard_inline3)
 
 
 @dp.callback_query(F.data == 'finance_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления финансами")
-    await callback.message.edit_text('Финансы за последний месяц:',
-                                     reply_markup=kb.keyboard_inline4)
->>>>>>> Stashed changes
+    await callback.message.edit_text('Финансы за последний месяц:', reply_markup=kb.keyboard_inline4)
 
 
 async def main():
