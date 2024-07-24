@@ -156,7 +156,7 @@ class DatabaseManager:
         """Удалить заказы, которые не были оплачены в течение 10 дней после создания"""
         try:
             cursor = self.conn.cursor()
-            ten_days_ago = datetime.datetime.now() - datetime.timedelta(days=10)
+            ten_days_ago = datetime.now() - timedelta(days=10)
             ten_days_ago_str = ten_days_ago.strftime('%Y-%m-%d')
             cursor.execute('''
                 DELETE FROM orders 
