@@ -160,11 +160,11 @@ db_manager.export_last_month_data_to_excel('last_month_data.xlsx')
 Экспортирует данные заказов в файл Excel.
 #### Использование:
 ```python
-db_manager.export_orders_to_excel('orders.xlsx', done=True)
+db_manager.export_orders_to_excel('orders.xlsx', False)
 ```
 #### Параметры:
 - `excel_path`: Путь к файлу Excel.
-- `done`: Статус выполнения заказа (`True` для выполненных, `False` для невыполненных).
+- `done`: Статус выполнения заказа, по умолчанию True (`True` для выполненных, `False` для невыполненных).
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
