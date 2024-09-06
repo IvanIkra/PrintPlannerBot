@@ -1,15 +1,16 @@
-import sqlite3
 import datetime
+import sqlite3
 from datetime import datetime, timedelta
+
 import pandas as pd
 
 
 class DatabaseManager:
-    def __init__(self, db_file):
+    def __init__(self, db_file: str):
         self.conn = self.create_connection(db_file)
         self.create_tables()
 
-    def create_connection(self, db_file):
+    def create_connection(self, db_file: str):
         """Создать соединение с базой данных SQLite, указанной в db_file"""
         conn = None
         try:
@@ -107,7 +108,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def update_material(self, material_name, amount, operation):
+    def update_material(self, material_name: str, amount: int, operation: str):
         """Обновить количество материала в базе данных"""
         try:
             cursor = self.conn.cursor()
@@ -135,8 +136,8 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def add_order(self, name, link, material, material_amount, recommended_date, importance, settings, cost,
-                  payment_info, done, creation_date):
+    def add_order(self, name: str, link: str, material: str, material_amount: int, recommended_date: str,
+                  importance: int, settings: str, cost: float, payment_info: bool, done: bool, creation_date: str):
         """Добавить новый заказ в базу данных"""
         try:
             cursor = self.conn.cursor()
@@ -168,7 +169,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_order(self, info, key='id'):
+    def get_order(self, info: str, key: str='id'):
         """Получить информацию о заказе по ID"""
         try:
             cursor = self.conn.cursor()
@@ -181,7 +182,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def delete_order(self, order_id):
+    def delete_order(self, order_id: int):
         """Удалить заказ по ID"""
         try:
             cursor = self.conn.cursor()
@@ -192,7 +193,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def add_revenue(self, order_id, amount, date_received):
+    def add_revenue(self, order_id: int, amount: float, date_received: str):
         """Добавить запись о доходе от заказа"""
         try:
             cursor = self.conn.cursor()
@@ -206,7 +207,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def add_expense(self, category, amount, date_spent, description):
+    def add_expense(self, category: str, amount: float, date_spent: str, description: str):
         """Добавить запись о расходах"""
         try:
             cursor = self.conn.cursor()
@@ -220,7 +221,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_all_materials_excel(self, excel_path):
+    def get_all_materials_excel(self, excel_path: str):
         """Экспортировать данные из таблицы inventory в файл Excel"""
         try:
             query = "SELECT * FROM inventory"
@@ -240,7 +241,7 @@ class DatabaseManager:
         first_day_last_month = last_day_last_month.replace(day=1)
         return first_day_last_month, last_day_last_month
 
-    def export_last_month_data_to_excel(self, excel_path):
+    def export_last_month_data_to_excel(self, excel_path: str):
         """Экспортировать данные расходов и доходов за последний календарный месяц в один файл Excel"""
         try:
             self.create_expenses_table()
@@ -270,7 +271,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def export_orders_to_excel(self, excel_path, done=True):
+    def export_orders_to_excel(self, excel_path: str, done: bool=True):
         try:
             query = '''
                 SELECT * FROM orders
@@ -288,7 +289,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def export_expenses_and_revenue_between_dates_to_excel(self, start_date, end_date, excel_path):
+    def export_expenses_and_revenue_between_dates_to_excel(self, start_date: str, end_date: str, excel_path: str):
         """Получить расходы и доходы между указанными датами и сохранить их в Excel"""
         try:
             cursor = self.conn.cursor()
@@ -308,7 +309,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def auto_delete_expired_records(self, days):
+    def auto_delete_expired_records(self, days: int):
         """Удалить записи из указанной таблицы, которые старше определенного количества дней"""
         try:
             cursor = self.conn.cursor()
@@ -321,7 +322,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_material_by_name(self, material_name):
+    def get_material_by_name(self, material_name: str):
         """Получить информацию о материале по названию"""
         try:
             cursor = self.conn.cursor()
@@ -331,7 +332,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_expenses_by_category(self, category, excel_path):
+    def get_expenses_by_category(self, category: str, excel_path: str):
         """Получить список расходов по категории и экспортировать в Excel"""
         try:
             cursor = self.conn.cursor()
@@ -343,7 +344,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def update_order_status(self, order_id, done):
+    def update_order_status(self, order_id: int, done: bool):
         """Обновить статус заказа по ID"""
         try:
             cursor = self.conn.cursor()
