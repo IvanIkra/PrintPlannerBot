@@ -19,10 +19,16 @@ log_file = 'data/logs/bot.log'
 with open(log_file, 'w', encoding='utf-8') as f:
     f.write('')
 
+log_dir = os.path.join('data', 'logs')
+os.makedirs(log_dir, exist_ok=True)
+log_file = os.path.join(log_dir, 'bot.log')
+with open(log_file, 'w', encoding='utf-8') as f:
+    f.write('')
+
 logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(levelname)s - %(message)s',
-                    handlers=[logging.FileHandler('data/logs/bot.log', encoding='utf-8'),
-                    logging.StreamHandler()])
+                   format='%(asctime)s - %(levelname)s - %(message)s',
+                   handlers=[logging.FileHandler(log_file, encoding='utf-8'),
+                           logging.StreamHandler()])
 
 bot = Bot(token=config.bot_token.get_secret_value())
 dp = Dispatcher()
