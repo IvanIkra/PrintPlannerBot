@@ -6,8 +6,6 @@
 .vagrant/
 
 # Mac/OSX
-.DS_Store
-*.DS_Store
 **/.DS_Store
 
 # Windows
