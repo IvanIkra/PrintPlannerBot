@@ -125,4 +125,4 @@ venv.bak/
 dmypy.json
 
 # Bot logs
-data/logs/bot.log
+**/.log
