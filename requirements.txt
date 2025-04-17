@@ -1,7 +1,6 @@
-asyncio~=3.4.3
-logging~=0.4.9.6
-aiogram~=3.4.1
-DateTime~=5.5
-payment~=0.0.1.2
-pydantic~=2.5.3
-yookassa~=3.3.0
+aiogram==3.19.0
+pydantic==2.5.2
+pydantic-settings==2.1.0
+pandas==2.2.3
+openpyxl==3.1.5
+python-dotenv==1.0.0
