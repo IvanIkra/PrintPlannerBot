@@ -1,5 +1,5 @@
 # PrintPlannerBot
-![](t.me/binary_brigade)
+![](https://t.me/binary_brigade)
 A Telegram bot for managing 3D printing orders and inventory.
 
 ## Features
