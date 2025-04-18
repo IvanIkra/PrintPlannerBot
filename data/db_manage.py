@@ -14,7 +14,7 @@ class DatabaseManager:
             print(e)
             self.conn = None
 
-    def create_connection(self, db_file: str):
+    def create_connection(self, db_file: str) -> sqlite3.Connection | None:
         """Создать соединение с базой данных SQLite, указанной в db_file"""
         try:
             conn = sqlite3.connect(db_file)
@@ -24,7 +24,7 @@ class DatabaseManager:
             print(e)
             return None
 
-    def create_tables(self):
+    def create_tables(self) -> int:
         """Создать все необходимые таблицы"""
         tables = [
             '''CREATE TABLE IF NOT EXISTS materials (
@@ -91,7 +91,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def update_material(self, material_name: str, amount: int, operation: str):
+    def update_material(self, material_name: str, amount: int, operation: str) -> int | float:
         """Обновить количество материала в базе данных"""
         try:
             cursor = self.conn.cursor()
@@ -124,7 +124,7 @@ class DatabaseManager:
 
     def add_order(self, name: str, link: str, material: str, material_amount: int, 
                  recommended_date: str, importance: int, settings: str, cost: float, 
-                 payment_info: bool, done: bool, creation_date: str):
+                 payment_info: bool, done: bool, creation_date: str) -> int:
         """Добавить новый заказ в базу данных"""
         try:
             cursor = self.conn.cursor()
@@ -157,7 +157,7 @@ class DatabaseManager:
             print(e)
             return -1
 
-    def delete_unpaid_orders(self):
+    def delete_unpaid_orders(self) -> int:
         """Удалить заказы, которые не были оплачены в течение 10 дней после создания"""
         try:
             cursor = self.conn.cursor()
@@ -173,7 +173,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_order(self, info: str, key: str = 'id'):
+    def get_order(self, info: str, key: str = 'id') -> tuple | int:
         """Получить информацию о заказе по ID"""
         try:
             cursor = self.conn.cursor()
@@ -199,7 +199,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def delete_order(self, order_id: int):
+    def delete_order(self, order_id: int) -> int:
         """Удалить заказ по ID"""
         try:
             cursor = self.conn.cursor()
@@ -210,7 +210,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def add_revenue(self, order_id: int, amount: float, date_received: str):
+    def add_revenue(self, order_id: int, amount: float, date_received: str) -> int:
         """Добавить запись о доходе от заказа"""
         try:
             cursor = self.conn.cursor()
@@ -224,7 +224,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def add_expense(self, category: str, amount: float, date_spent: str, description: str):
+    def add_expense(self, category: str, amount: float, date_spent: str, description: str) -> int:
         """Добавить запись о расходах"""
         try:
             cursor = self.conn.cursor()
@@ -244,7 +244,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_all_materials_excel(self, excel_path: str):
+    def get_all_materials_excel(self, excel_path: str) -> int:
         """Экспортировать данные из таблицы inventory в файл Excel"""
         try:
             query = "SELECT * FROM inventory"
@@ -256,7 +256,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_last_month_date_range(self):
+    def get_last_month_date_range(self) -> tuple[datetime | None, datetime | None]:
         """Получить начало и конец последнего календарного месяца"""
         try:
             today = datetime.today()
@@ -268,7 +268,7 @@ class DatabaseManager:
             print(e)
             return None, None
 
-    def export_last_month_data_to_excel(self, excel_path: str):
+    def export_last_month_data_to_excel(self, excel_path: str) -> int:
         """Экспортировать данные расходов и доходов за последний календарный месяц в один файл Excel"""
         try:
             self.create_expenses_table()
@@ -298,7 +298,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def export_orders_to_excel(self, excel_path: str, done: bool=True):
+    def export_orders_to_excel(self, excel_path: str, done: bool = True) -> int:
         try:
             query = '''
                 SELECT * FROM orders
@@ -316,7 +316,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def export_expenses_and_revenue_between_dates_to_excel(self, start_date: str, end_date: str, excel_path: str):
+    def export_expenses_and_revenue_between_dates_to_excel(self, start_date: str, end_date: str, excel_path: str) -> int:
         """Получить расходы и доходы между указанными датами и сохранить их в Excel"""
         try:
             cursor = self.conn.cursor()
@@ -336,7 +336,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def auto_delete_expired_records(self, days: int):
+    def auto_delete_expired_records(self, days: int) -> int:
         """Удалить записи из указанной таблицы, которые старше определенного количества дней"""
         try:
             cursor = self.conn.cursor()
@@ -349,7 +349,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_material_by_name(self, material_name: str):
+    def get_material_by_name(self, material_name: str) -> tuple | int:
         """Получить информацию о материале по названию"""
         try:
             cursor = self.conn.cursor()
@@ -360,7 +360,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_expenses_by_category(self, category: str, excel_path: str):
+    def get_expenses_by_category(self, category: str, excel_path: str) -> int:
         """Получить список расходов по категории и экспортировать в Excel"""
         try:
             cursor = self.conn.cursor()
@@ -377,7 +377,7 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def update_order_status(self, order_id: int, done: bool):
+    def update_order_status(self, order_id: int, done: bool) -> int:
         """Обновить статус заказа по ID"""
         try:
             cursor = self.conn.cursor()
@@ -390,13 +390,23 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def close_connection(self):
+    def close_connection(self) -> int:
         """Закрыть соединение с базой данных"""
         try:
             if self.conn:
                 self.conn.close()
                 return 1
             return 0
+        except Exception as e:
+            print(e)
+            return 0
+
+    def get_all_materials(self) -> list[tuple] | int:
+        """Получить список всех материалов из базы данных"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT name, quantity FROM materials')
+            return cursor.fetchall()
         except Exception as e:
             print(e)
             return 0
