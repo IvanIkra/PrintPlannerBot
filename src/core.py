@@ -52,19 +52,15 @@ class Payment(StatesGroup):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     try:
-        # Сначала отправляем приветственное сообщение с фото
         image = types.FSInputFile("data/images/printplanner.png")
         await message.answer_photo(
             photo=image,
             caption="👋 Вас приветствует команда разработчиков Binary Brigade."
         )
     except FileNotFoundError:
-        # Если файл не найден, отправляем только текстовое сообщение
         await message.answer(
             "👋 Вас приветствует команда разработчиков Binary Brigade."
         )
-    
-    # Отправляем сообщение с кнопками ТОЛЬКО ОДИН РАЗ
     await message.answer(
         "*↓Нажмите, чтобы вызвать меню↓*",
         reply_markup=kb.keyboard_inline2,
@@ -82,62 +78,31 @@ async def make_order(callback: CallbackQuery, state: FSMContext):
 
 @dp.message(Ord.name)
 async def handle_name(message: Message, state: FSMContext):
-    logging.info(f"Setting name: {message.text}")
     await ord_2(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after name: {current_data}")
 
 @dp.message(Ord.link)
 async def handle_link(message: Message, state: FSMContext):
-    logging.info(f"Setting link: {message.text}")
     await ord_3(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after link: {current_data}")
 
 @dp.message(Ord.material)
 async def handle_material(message: Message, state: FSMContext):
-    logging.info(f"Setting material: {message.text}")
     await ord_4(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after material: {current_data}")
 
 @dp.message(Ord.material_amount)
 async def handle_material_amount(message: Message, state: FSMContext):
-    logging.info(f"Setting material_amount: {message.text}")
     await ord_5(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after material_amount: {current_data}")
 
 @dp.message(Ord.recommended_date)
 async def handle_date(message: Message, state: FSMContext):
-    logging.info(f"Setting recommended_date: {message.text}")
     await ord_6(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after recommended_date: {current_data}")
 
 @dp.message(Ord.importance)
 async def handle_importance(message: Message, state: FSMContext):
-    logging.info(f"Setting importance: {message.text}")
     await ord_7(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after importance: {current_data}")
 
 @dp.message(Ord.settings)
 async def handle_settings(message: Message, state: FSMContext):
-    logging.info(f"Setting settings: {message.text}")
     await ord_8(message, state)
-    current_data = await state.get_data()
-    logging.info(f"Current FSM Data after settings: {current_data}")
-
-@dp.callback_query(F.data == 'no_makeorder')
-async def no_makeorder(callback: CallbackQuery, state: FSMContext):
-    data = await get_order_data(state)
-    await callback.answer("Отмена создания заказа")
-    await callback.message.edit_text(
-        f'Заказ *{data["name"]}* не создан',
-        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[kb.backmenu_button]]),
-        parse_mode="Markdown"
-    )
 
 @dp.callback_query(F.data == 'yes_makeorder')
 async def yes_makeorder(callback: CallbackQuery, state: FSMContext):
@@ -350,12 +315,7 @@ async def custom_price_makeorder(callback: CallbackQuery):
 @dp.callback_query(F.data == "back_universal")
 async def universal_back(callback: CallbackQuery, state: FSMContext):
     current_state = await state.get_state()
-    current_data = await state.get_data()
     
-    logging.info(f"BACK BUTTON PRESSED - Current State: {current_state}")
-    logging.info(f"Current FSM Data: {current_data}")
-    
-    # Словарь состояний и их предыдущих шагов
     state_transitions = {
         Ord.link: (Ord.name, "Введите название заказа"),
         Ord.material: (Ord.link, "Введите ссылку на 3D модель"),
@@ -366,40 +326,23 @@ async def universal_back(callback: CallbackQuery, state: FSMContext):
     }
 
     if current_state == Ord.name:
-        logging.info("Returning to order management menu from initial state")
         await callback.answer("Вы вернулись назад")
         await callback.message.edit_text(
             'Ваши не выполненные заказы:',
             reply_markup=kb.keyboard_inline1
         )
         await state.clear()
-        logging.info("State cleared")
     elif current_state in state_transitions:
-        # Получаем предыдущее состояние и сообщение из словаря
         prev_state, message_text = state_transitions[current_state]
-        
-        # Сохраняем данные текущего состояния
         data = await state.get_data()
-        logging.info(f"Saving current data before state change: {data}")
-        
-        # Устанавливаем предыдущее состояние
         await state.set_state(prev_state)
-        logging.info(f"State changed to: {prev_state}")
-        
-        # Возвращаем сохраненные данные в состояние
         await state.update_data(**data)
-        
-        # Проверяем, что данные сохранились
-        updated_data = await state.get_data()
-        logging.info(f"Data after state change: {updated_data}")
-        
         await callback.answer("Вы вернулись назад")
         await callback.message.edit_text(
             message_text,
             reply_markup=kb.keyboard_inline6
         )
     else:
-        logging.info("Returning to main menu (no state or unknown state)")
         await callback.answer("Вы вернулись в главное меню")
         await callback.message.edit_text(
             'Добро пожаловать в меню бота-помощника в 3D печати! Выберите нужный вам пункт меню.',
@@ -407,8 +350,6 @@ async def universal_back(callback: CallbackQuery, state: FSMContext):
         )
         if current_state is not None:
             await state.clear()
-            logging.info("State cleared")
-
 @dp.callback_query(F.data == 'menus')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к меню")
@@ -416,6 +357,15 @@ async def make_order(callback: CallbackQuery):
         'Добро пожаловать в меню бота-помощника в 3D печати! Выберите нужный вам пункт меню.',
         reply_markup=kb.keyboard_inline_main_menu
     )
+
+@dp.callback_query(F.data == 'cancel_order')
+async def cancel_order(callback: CallbackQuery, state: FSMContext):
+    await callback.answer("Отмена создания заказа")
+    await callback.message.edit_text(
+        'Ваши не выполненные заказы:',
+        reply_markup=kb.keyboard_inline1
+    )
+    await state.clear()
 
 @dp.callback_query(F.data == 'order_manage')
 async def make_order(callback: CallbackQuery):
