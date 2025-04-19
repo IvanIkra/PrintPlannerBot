@@ -1,10 +1,10 @@
 from datetime import date
 
-from aiogram import F
+from aiogram import F, Dispatcher
 from aiogram.filters.command import Message
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, Message
 
 import src.root.keyboards as kb
 from data.db_manage import DatabaseManager
@@ -100,10 +100,11 @@ async def ord_7(message: Message, state: FSMContext):
         await message.answer("Ошибка: важность должна быть целым числом. Пожалуйста, введите заново.",
                              reply_markup=kb.keyboard_inline6)
 
+
 async def ord_8(message: Message, state: FSMContext):
     await state.update_data(settings=message.text)
     data = await state.get_data()
-    
+
     text = (
         f"Название: {data['name']}\n"
         f"Ссылка: {data['link']}\n"
@@ -114,14 +115,16 @@ async def ord_8(message: Message, state: FSMContext):
         f"Настройки: {data['settings']}\n\n"
         f"Вы хотите продолжить создание заказа с этими данными?"
     )
-    
+
     # Используем клавиатуру с кнопками да/нет
     await message.answer(text, reply_markup=kb.keyboard_inline5)
-    
+
+
 async def get_order_data(state: FSMContext):
     data = await state.get_data()
     await state.clear()
     return data
+
 
 async def create_order_in_db(user_id: int, data: dict) -> int:
     try:
@@ -144,4 +147,35 @@ async def create_order_in_db(user_id: int, data: dict) -> int:
     except Exception as e:
         print(f"Error creating order in db: {e}")
         return -1
-    
+
+
+def handle_order_states(dp: Dispatcher) -> None:
+    """Регистрирует все обработчики состояний заказа"""
+
+    @dp.message(Ord.name)
+    async def handle_name(message: Message, state: FSMContext):
+        await ord_2(message, state)
+
+    @dp.message(Ord.link)
+    async def handle_link(message: Message, state: FSMContext):
+        await ord_3(message, state)
+
+    @dp.message(Ord.material)
+    async def handle_material(message: Message, state: FSMContext):
+        await ord_4(message, state)
+
+    @dp.message(Ord.material_amount)
+    async def handle_material_amount(message: Message, state: FSMContext):
+        await ord_5(message, state)
+
+    @dp.message(Ord.recommended_date)
+    async def handle_date(message: Message, state: FSMContext):
+        await ord_6(message, state)
+
+    @dp.message(Ord.importance)
+    async def handle_importance(message: Message, state: FSMContext):
+        await ord_7(message, state)
+
+    @dp.message(Ord.settings)
+    async def handle_settings(message: Message, state: FSMContext):
+        await ord_8(message, state)
