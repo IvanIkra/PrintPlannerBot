@@ -15,12 +15,16 @@ db_manager = DatabaseManager('example.db')
 Создаёт соединение с базой данных SQLite, указанной в `db_file`.
 #### Использование:
 Вызывается автоматически при инициализации объекта.
+#### Возвращает:
+- `Connection` объект в случае успеха, `None` в случае ошибки.
 
 ### `create_tables(self)`
 #### Описание:
 Создаёт все необходимые таблицы в базе данных.
 #### Использование:
 Вызывается автоматически при инициализации объекта.
+#### Возвращает:
+- `1` в случае успеха, `0` в случае ошибки.
 
 ### `update_material(self, material_name, amount, operation)`
 #### Описание:
@@ -35,16 +39,6 @@ db_manager.update_material('Steel', 50, 'add')
 - `operation: str`: Операция (`'add'` или `'subtract'`).
 #### Возвращает:
 - Новое количество материала в случае успеха, `-1` если недостаточно материала для вычитания, `0` в случае ошибки.
-
-### `get_all_materials(self)`
-#### Описание:
-Получает список всех материалов из базы данных.
-#### Использование:
-```python
-materials = db_manager.get_all_materials()
-```
-#### Возвращает:
-- Список кортежей (name, quantity) в случае успеха, пустой 0 в случае ошибки.
 
 ### `add_order(self, name, link, material, material_amount, recommended_date, importance, settings, cost, payment_info, done, creation_date)`
 #### Описание:
@@ -68,6 +62,28 @@ db_manager.add_order('Order1', 'http://link.com', 'Steel', 10, '2024-12-01', 1, 
 #### Возвращает:
 - ID добавленного заказа в случае успеха, `-1` в случае ошибки.
 
+### `get_pending_orders(self)`
+#### Описание:
+Получает список всех невыполненных заказов.
+#### Использование:
+```python
+orders = db_manager.get_pending_orders()
+```
+#### Возвращает:
+- Список заказов в случае успеха, пустой список в случае ошибки.
+
+### `export_pending_orders_to_excel(self, excel_path)`
+#### Описание:
+Экспортирует невыполненные заказы в Excel файл.
+#### Использование:
+```python
+success = db_manager.export_pending_orders_to_excel('pending_orders.xlsx')
+```
+#### Параметры:
+- `excel_path: str`: Путь к файлу Excel.
+#### Возвращает:
+- `True` в случае успеха, `False` в случае ошибки или отсутствия заказов.
+
 ### `delete_unpaid_orders(self)`
 #### Описание:
 Удаляет заказы, которые не были оплачены в течение 10 дней после создания.
@@ -80,16 +96,17 @@ db_manager.delete_unpaid_orders()
 
 ### `get_order(self, info, key = 'id')`
 #### Описание:
-Получает информацию о заказе по ID.
+Получает информацию о заказе по ID или имени.
 #### Использование:
 ```python
-order = db_manager.get_order(1)
+order = db_manager.get_order(1)  # по ID
+order = db_manager.get_order('Order1', 'name')  # по имени
 ```
 #### Параметры:
-- `info: int, str`: ID или имя заказа.
-- `key: str` : Ключ поиска, 'id' - поиск по ID, 'name' - поиск по имени заказа.
+- `info: str | int`: ID или имя заказа.
+- `key: str`: Ключ поиска ('id' или 'name').
 #### Возвращает:
-- Запись заказа в случае успеха, `0` в случае ошибки.
+- Кортеж с данными заказа в случае успеха, `0` в случае ошибки.
 
 ### `delete_order(self, order_id)`
 #### Описание:
@@ -117,12 +134,12 @@ db_manager.add_revenue(1, 100.0, '2024-07-01')
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
-### `add_expense(self, category: str, amount, date_spent, description)`
+### `add_expense(self, category, amount, date_spent, description)`
 #### Описание:
 Добавляет запись о расходах.
 #### Использование:
 ```python
-db_manager.add_expense('Office Supplies', 50.0, '2024-07-01', 'Bought pens and paper')
+db_manager.add_expense('Office Supplies', 50.0, '2024-07-01', 'Bought pens')
 ```
 #### Параметры:
 - `category: str`: Категория расходов.
@@ -132,76 +149,15 @@ db_manager.add_expense('Office Supplies', 50.0, '2024-07-01', 'Bought pens and p
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
-### `get_all_materials_excel(self, excel_path)`
-#### Описание:
-Экспортирует данные из таблицы `inventory` в файл Excel.
-#### Использование:
-```python
-db_manager._materials_excel('materials.xlsx')
-```
-#### Параметры:
-- `excel_path: str`: Путь к файлу Excel.
-#### Возвращает:
-- `1` в случае успеха, `0` в случае ошибки.
-
-### `get_last_month_date_range(self)`
-#### Описание:
-Получает начало и конец последнего календарного месяца.
-#### Использование:
-```python
-start_date, end_date = db_manager.get_last_month_date_range()
-```
-#### Возвращает:
-- Кортеж с началом и концом последнего календарного месяца.
-
-### `export_last_month_data_to_excel(self, excel_path)`
-#### Описание:
-Экспортирует данные расходов и доходов за последний календарный месяц в один файл Excel.
-#### Использование:
-```python
-db_manager.export_last_month_data_to_excel('last_month_data.xlsx')
-```
-#### Параметры:
-- `excel_path: str`: Путь к файлу Excel.
-#### Возвращает:
-- `1` в случае успеха, `0` в случае ошибки.
-
-### `export_orders_to_excel(self, excel_path, done = True)`
-#### Описание:
-Экспортирует данные заказов в файл Excel.
-#### Использование:
-```python
-db_manager.export_orders_to_excel('orders.xlsx', False)
-```
-#### Параметры:
-- `excel_path: str`: Путь к файлу Excel.
-- `done: bool`: Статус выполнения заказа, по умолчанию True (`True` для выполненных, `False` для невыполненных).
-#### Возвращает:
-- `1` в случае успеха, `0` в случае ошибки.
-
-### `export_expenses_and_revenue_between_dates_to_excel(self, start_date, end_date, excel_path)`
-#### Описание:
-Получает расходы и доходы между указанными датами и сохраняет их в Excel.
-#### Использование:
-```python
-db_manager.export_expenses_and_revenue_between_dates_to_excel('2024-06-01', '2024-06-30', 'expenses_revenue.xlsx')
-```
-#### Параметры:
-- `start_date: str`: Начальная дата.
-- `end_date: str`: Конечная дата.
-- `excel_path: str`: Путь к файлу Excel.
-#### Возвращает:
-- `1` в случае успеха, `0` в случае ошибки.
-
 ### `auto_delete_expired_records(self, days)`
 #### Описание:
-Удаляет записи из указанной таблицы, которые старше определенного количества дней.
+Удаляет записи заказов, которые старше указанного количества дней.
 #### Использование:
 ```python
 db_manager.auto_delete_expired_records(30)
 ```
 #### Параметры:
-- `days: int`: Количество дней для проверки.
+- `days: int`: Количество дней.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
 
@@ -215,33 +171,43 @@ material = db_manager.get_material_by_name('Steel')
 #### Параметры:
 - `material_name: str`: Название материала.
 #### Возвращает:
-- Запись материала в случае успеха, `0` в случае ошибки.
-
-### `get_expenses_by_category(self, category, excel_path)`
-#### Описание:
-Получает список расходов по категории и экспортирует в Excel.
-#### Использование:
-```python
-db_manager.get_expenses_by_category('Office Supplies', 'office_supplies_expenses.xlsx')
-```
-#### Параметры:
-- `category: str`: Категория расходов.
-- `excel_path: str`: Путь к файлу Excel.
-#### Возвращает:
-- `1` в случае успеха, `0` в случае ошибки.
+- Кортеж (name, quantity) в случае успеха, `0` в случае ошибки.
 
 ### `update_order_status(self, order_id, done)`
 #### Описание:
-Обновляет статус заказа по ID.
+Обновляет статус заказа.
 #### Использование:
 ```python
 db_manager.update_order_status(1, True)
 ```
 #### Параметры:
 - `order_id: int`: ID заказа.
-- `done: bool`: Статус выполнения заказа (`True` для выполненного, `False` для невыполненного).
+- `done: bool`: Новый статус.
 #### Возвращает:
 - `1` в случае успеха, `0` в случае ошибки.
+
+### `get_all_materials(self)`
+#### Описание:
+Получает список всех материалов.
+#### Использование:
+```python
+materials = db_manager.get_all_materials()
+```
+#### Возвращает:
+- Список кортежей (name, quantity) в случае успеха, `0` в случае ошибки.
+
+### `update_order_cost(self, order_id, cost)`
+#### Описание:
+Обновляет стоимость заказа.
+#### Использование:
+```python
+db_manager.update_order_cost(1, 150.0)
+```
+#### Параметры:
+- `order_id: int`: ID заказа.
+- `cost: float`: Новая стоимость.
+#### Возвращает:
+- `True` в случае успеха, `False` в случае ошибки.
 
 ### `close_connection(self)`
 #### Описание:
@@ -251,17 +217,17 @@ db_manager.update_order_status(1, True)
 db_manager.close_connection()
 ```
 #### Возвращает:
-- `1` в случае успеха.
-
+- `1` в случае успеха, `0` в случае ошибки.
 
 # !ВАЖНО!
-### В рамках данного проекта пи каждом использовании бд, стоит закрывать соединение и в следующий раз открывать его повторно
-Пример работы с бд внутри бота
+### В рамках данного проекта при каждом использовании БД следует закрывать соединение и в следующий раз открывать его повторно
+Пример работы с БД внутри бота:
 ```python
     user_id = message.from_user.id # Получаем id пользователя в тг
-    db_manager = DatabaseManager(f'user{user_id}data.db') # Создаем или подключаемся к индивидуальной бд
+    db_manager = DatabaseManager(f'data/db/user{user_id}data.db') # Создаем или подключаемся к индивидуальной бд
     
     # То, что мы хотим сделать
     
     db_manager.close_connection() # Закрываем подключение
+```
 ```
