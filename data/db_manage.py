@@ -157,6 +157,101 @@ class DatabaseManager:
             print(e)
             return -1
 
+    def get_pending_orders(self) -> list:
+        """Получить все невыполненные заказы"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('''
+                SELECT 
+                    o.id,
+                    o.name,
+                    o.link,
+                    m.name as material,
+                    om.quantity as material_amount,
+                    o.recommended_date,
+                    o.importance,
+                    o.settings,
+                    o.cost,
+                    o.creation_date
+                FROM orders o
+                LEFT JOIN order_materials om ON o.id = om.order_id
+                LEFT JOIN materials m ON om.material_id = m.id
+                WHERE o.status_id = 1
+                ORDER BY o.recommended_date, o.importance DESC
+            ''')
+            return cursor.fetchall()
+        except Exception as e:
+            print(f"Error getting pending orders: {e}")
+            return []
+
+    def export_pending_orders_to_excel(self, excel_path: str) -> bool:
+        """Экспортировать невыполненные заказы в Excel"""
+        try:
+            orders = self.get_pending_orders()
+            
+            if not orders:
+                return False
+                
+            columns = ['ID', 'Название', 'Ссылка', 'Материал', 'Количество материала', 
+                    'Дата выполнения', 'Важность', 'Настройки', 'Стоимость', 'Дата создания']
+            df = pd.DataFrame(orders, columns=columns)
+            
+            # Сортировка по ID
+            df = df.sort_values('ID')
+            
+            # Создаем директорию для excel файла, если её нет
+            os.makedirs(os.path.dirname(excel_path), exist_ok=True)
+            
+            # Создаем writer с engine='xlsxwriter' для форматирования
+            with pd.ExcelWriter(excel_path, engine='xlsxwriter') as writer:
+                df.to_excel(writer, index=False, sheet_name='Невыполненные заказы')
+                
+                # Получаем workbook и worksheet
+                workbook = writer.book
+                worksheet = writer.sheets['Невыполненные заказы']
+                
+                # Форматы для заголовков и данных
+                header_format = workbook.add_format({
+                    'bold': True,
+                    'text_wrap': True,
+                    'valign': 'vcenter',
+                    'align': 'center',
+                    'border': 1,
+                    'bg_color': '#D9D9D9'  # Светло-серый фон для заголовков
+                })
+                
+                data_format = workbook.add_format({
+                    'align': 'left',
+                    'valign': 'vcenter',
+                    'border': 1
+                })
+                
+                # Применяем форматы к заголовкам
+                for col_num, value in enumerate(df.columns.values):
+                    worksheet.write(0, col_num, value, header_format)
+                
+                # Применяем форматы к данным
+                for row in range(len(df)):
+                    for col in range(len(df.columns)):
+                        worksheet.write(row + 1, col, df.iloc[row, col], data_format)
+                
+                # Автоматическая настройка ширины столбцов
+                for idx, col in enumerate(df.columns):
+                    max_length = max(
+                        df[col].astype(str).apply(len).max(),  # максимальная длина данных
+                        len(col)  # длина заголовка
+                    )
+                    worksheet.set_column(idx, idx, max_length + 2)
+                
+                # Устанавливаем высоту строк
+                worksheet.set_default_row(20)  # Высота для всех строк
+                worksheet.set_row(0, 25)  # Увеличенная высота для заголовка
+                
+            return True
+        except Exception as e:
+            print(f"Error exporting to Excel: {e}")
+            return False
+
     def delete_unpaid_orders(self) -> int:
         """Удалить заказы, которые не были оплачены в течение 10 дней после создания"""
         try:
@@ -244,98 +339,6 @@ class DatabaseManager:
             print(e)
             return 0
 
-    def get_all_materials_excel(self, excel_path: str) -> int:
-        """Экспортировать данные из таблицы inventory в файл Excel"""
-        try:
-            query = "SELECT * FROM inventory"
-            df = pd.read_sql_query(query, self.conn)
-            df.to_excel(excel_path, index=False)
-
-            return 1
-        except Exception as e:
-            print(e)
-            return 0
-
-    def get_last_month_date_range(self) -> tuple[datetime | None, datetime | None]:
-        """Получить начало и конец последнего календарного месяца"""
-        try:
-            today = datetime.today()
-            first_day_this_month = today.replace(day=1)
-            last_day_last_month = first_day_this_month - timedelta(days=1)
-            first_day_last_month = last_day_last_month.replace(day=1)
-            return first_day_last_month, last_day_last_month
-        except Exception as e:
-            print(e)
-            return None, None
-
-    def export_last_month_data_to_excel(self, excel_path: str) -> int:
-        """Экспортировать данные расходов и доходов за последний календарный месяц в один файл Excel"""
-        try:
-            self.create_expenses_table()
-            self.create_revenue_table()
-
-            start_date, end_date = self.get_last_month_date_range()
-
-            expenses_query = '''
-                SELECT * FROM expenses
-                WHERE date_spent BETWEEN ? AND ?
-            '''
-            revenue_query = '''
-                SELECT * FROM revenue
-                WHERE date_received BETWEEN ? AND ?
-            '''
-
-            expenses_df = pd.read_sql_query(expenses_query, self.conn,
-                                            params=(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
-            revenue_df = pd.read_sql_query(revenue_query, self.conn,
-                                           params=(start_date.strftime('%Y-%m-%d'), end_date.strftime('%Y-%m-%d')))
-            with pd.ExcelWriter(excel_path) as writer:
-                expenses_df.to_excel(writer, sheet_name='Expenses', index=False)
-                revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
-
-            return 1
-        except Exception as e:
-            print(e)
-            return 0
-
-    def export_orders_to_excel(self, excel_path: str, done: bool = True) -> int:
-        try:
-            query = '''
-                SELECT * FROM orders
-                WHERE done = ?
-                ORDER BY recommended_date, importance DESC
-            '''
-
-            df = pd.read_sql_query(query, self.conn, params=(int(done),))
-
-            sheet_name = 'Completed Orders' if done else 'Pending Orders'
-            df.to_excel(excel_path, sheet_name=sheet_name, index=False)
-
-            return 1
-        except Exception as e:
-            print(e)
-            return 0
-
-    def export_expenses_and_revenue_between_dates_to_excel(self, start_date: str, end_date: str, excel_path: str) -> int:
-        """Получить расходы и доходы между указанными датами и сохранить их в Excel"""
-        try:
-            cursor = self.conn.cursor()
-
-            expenses_query = "SELECT * FROM expenses WHERE date_spent BETWEEN ? AND ?"
-            expenses_df = pd.read_sql_query(expenses_query, self.conn, params=(start_date, end_date))
-
-            revenue_query = "SELECT * FROM revenue WHERE date_received BETWEEN ? AND ?"
-            revenue_df = pd.read_sql_query(revenue_query, self.conn, params=(start_date, end_date))
-
-            with pd.ExcelWriter(excel_path) as writer:
-                expenses_df.to_excel(writer, sheet_name='Expenses', index=False)
-                revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
-
-            return 1
-        except Exception as e:
-            print(e)
-            return 0
-
     def auto_delete_expired_records(self, days: int) -> int:
         """Удалить записи из указанной таблицы, которые старше определенного количества дней"""
         try:
@@ -356,23 +359,6 @@ class DatabaseManager:
             cursor.execute('SELECT name, quantity FROM materials WHERE name = ?', 
                          (material_name,))
             return cursor.fetchone()
-        except Exception as e:
-            print(e)
-            return 0
-
-    def get_expenses_by_category(self, category: str, excel_path: str) -> int:
-        """Получить список расходов по категории и экспортировать в Excel"""
-        try:
-            cursor = self.conn.cursor()
-            query = '''
-                SELECT e.amount, e.date_spent, e.description 
-                FROM expenses e
-                JOIN expense_categories ec ON e.category_id = ec.id
-                WHERE ec.name = ?
-            '''
-            df = pd.read_sql_query(query, self.conn, params=(category,))
-            df.to_excel(excel_path, index=False)
-            return 1
         except Exception as e:
             print(e)
             return 0
@@ -410,3 +396,15 @@ class DatabaseManager:
         except Exception as e:
             print(e)
             return 0
+
+    def update_order_cost(self, order_id: int, cost: float) -> bool:
+        """Обновить стоимость заказа"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('UPDATE orders SET cost = ? WHERE id = ?', (cost, order_id))
+            self.conn.commit()
+            return True
+        except Exception as e:
+            print(f"Error updating order cost: {e}")
+            return False
+        

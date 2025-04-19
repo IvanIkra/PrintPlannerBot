@@ -137,7 +137,7 @@ db_manager.add_expense('Office Supplies', 50.0, '2024-07-01', 'Bought pens and p
 Экспортирует данные из таблицы `inventory` в файл Excel.
 #### Использование:
 ```python
-db_manager.get_all_materials_excel('materials.xlsx')
+db_manager._materials_excel('materials.xlsx')
 ```
 #### Параметры:
 - `excel_path: str`: Путь к файлу Excel.

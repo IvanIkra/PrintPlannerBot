@@ -7,6 +7,14 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import CallbackQuery
 
 import src.root.keyboards as kb
+from data.db_manage import DatabaseManager
+
+from datetime import datetime
+
+__all__ = [
+    'Ord', 'ord_1', 'ord_2', 'ord_3', 'ord_4', 'ord_5', 'ord_6', 'ord_7', 'ord_8',
+    'get_order_data', 'create_order_in_db'
+]
 
 
 class Ord(StatesGroup):
@@ -24,10 +32,12 @@ class Payment(StatesGroup):
 
 
 async def ord_1(callback: CallbackQuery, state: FSMContext):
-    await callback.answer("Переход к созданию заказа")
-    await callback.message.edit_text("Введите название заказа",
-                                   reply_markup=kb.keyboard_inline6)
     await state.set_state(Ord.name)
+    # Вместо edit_text используем answer
+    await callback.message.answer(
+        "Введите название заказа",
+        reply_markup=kb.keyboard_inline6
+    )
 
 
 async def ord_2(message: Message, state: FSMContext):
@@ -90,21 +100,48 @@ async def ord_7(message: Message, state: FSMContext):
         await message.answer("Ошибка: важность должна быть целым числом. Пожалуйста, введите заново.",
                              reply_markup=kb.keyboard_inline6)
 
-
 async def ord_8(message: Message, state: FSMContext):
     await state.update_data(settings=message.text)
     data = await state.get_data()
-    await message.answer(
-        f'Имя заказа: {data["name"]}\n'
-        f'Ссылка на 3D модель: {data["link"]}\n'
-        f'Материал: {data["material"]}\n'
-        f'Количество материала: {data["material_amount"]}\n'
-        f'Дата выполнения: {data["recommended_date"]}\n'
-        f'Важность: {data["importance"]}\nНастройки: {data["settings"]}'
-        f'\n\n*Вы хотите создать заказ с этими данными?*', reply_markup=kb.keyboard_inline5, parse_mode="Markdown")
     
+    text = (
+        f"Название: {data['name']}\n"
+        f"Ссылка: {data['link']}\n"
+        f"Материал: {data['material']}\n"
+        f"Количество материала: {data['material_amount']}\n"
+        f"Дата выполнения: {data['recommended_date']}\n"
+        f"Важность: {data['importance']}\n"
+        f"Настройки: {data['settings']}\n\n"
+        f"Вы хотите продолжить создание заказа с этими данными?"
+    )
+    
+    # Используем клавиатуру с кнопками да/нет
+    await message.answer(text, reply_markup=kb.keyboard_inline5)
     
 async def get_order_data(state: FSMContext):
     data = await state.get_data()
     await state.clear()
     return data
+
+async def create_order_in_db(user_id: int, data: dict) -> int:
+    try:
+        db_manager = DatabaseManager(f'data/db/user{user_id}data.db')
+        order_id = db_manager.add_order(
+            name=data["name"],
+            link=data["link"],
+            material=data["material"],
+            material_amount=data["material_amount"],
+            recommended_date=data["recommended_date"],
+            importance=data["importance"],
+            settings=data["settings"],
+            cost=data["cost"],  # Используем рассчитанную стоимость
+            payment_info=False,
+            done=False,
+            creation_date=datetime.now().strftime('%Y-%m-%d')
+        )
+        db_manager.close_connection()
+        return order_id
+    except Exception as e:
+        print(f"Error creating order in db: {e}")
+        return -1
+    
