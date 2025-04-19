@@ -1,159 +1,163 @@
 import datetime
 import sqlite3
 from datetime import datetime, timedelta
-
 import pandas as pd
+import os
 
 
 class DatabaseManager:
     def __init__(self, db_file: str):
-        self.conn = self.create_connection(db_file)
-        self.create_tables()
+        try:
+            self.conn = self.create_connection(db_file)
+            self.create_tables()
+        except Exception as e:
+            print(e)
+            self.conn = None
 
-    def create_connection(self, db_file: str):
+    def create_connection(self, db_file: str) -> sqlite3.Connection | None:
         """Создать соединение с базой данных SQLite, указанной в db_file"""
-        conn = None
         try:
             conn = sqlite3.connect(db_file)
-        except sqlite3.Error as e:
+            conn.execute("PRAGMA foreign_keys = ON")
+            return conn
+        except Exception as e:
             print(e)
-            return 0
-        return conn
+            return None
 
-    def create_tables(self):
+    def create_tables(self) -> int:
         """Создать все необходимые таблицы"""
-        self.create_expenses_table()
-        self.create_inventory_table()
-        self.create_revenue_table()
-        self.create_orders_table()
-        return 1
-
-    def create_expenses_table(self):
-        """Создать таблицу для учёта расходов в базе данных"""
+        tables = [
+            '''CREATE TABLE IF NOT EXISTS materials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                quantity INTEGER NOT NULL DEFAULT 0
+            )''',
+            '''CREATE TABLE IF NOT EXISTS expense_categories (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )''',
+            '''CREATE TABLE IF NOT EXISTS order_statuses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL
+            )''',
+            '''CREATE TABLE IF NOT EXISTS orders (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                link TEXT,
+                recommended_date TEXT,
+                importance INTEGER,
+                settings TEXT,
+                cost REAL,
+                payment_info BOOLEAN,
+                status_id INTEGER NOT NULL DEFAULT 1,
+                creation_date TEXT NOT NULL,
+                FOREIGN KEY (status_id) REFERENCES order_statuses(id)
+            )''',
+            '''CREATE TABLE IF NOT EXISTS order_materials (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER NOT NULL,
+                material_id INTEGER NOT NULL,
+                quantity INTEGER NOT NULL,
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+                FOREIGN KEY (material_id) REFERENCES materials(id)
+            )''',
+            '''CREATE TABLE IF NOT EXISTS expenses (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category_id INTEGER NOT NULL,
+                amount REAL NOT NULL,
+                date_spent TEXT NOT NULL,
+                description TEXT,
+                FOREIGN KEY (category_id) REFERENCES expense_categories(id)
+            )''',
+            '''CREATE TABLE IF NOT EXISTS revenue (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                order_id INTEGER,
+                amount REAL,
+                date_received TEXT,
+                FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE
+            )'''
+        ]
+        
         try:
             cursor = self.conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS expenses (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    category TEXT,
-                    amount REAL,
-                    date_spent TEXT,
-                    description TEXT
-                )
-            ''')
+            for table in tables:
+                cursor.execute(table)
+            
+            # Initialize order statuses if empty
+            cursor.execute("INSERT OR IGNORE INTO order_statuses (id, name) VALUES (1, 'pending'), (2, 'completed')")
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def create_inventory_table(self):
-        """Создать таблицу в базе данных для материалов"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS inventory (
-                    material_name TEXT PRIMARY KEY,
-                    quantity INTEGER NOT NULL
-                )
-            ''')
-            self.conn.commit()
-            return 1
-        except sqlite3.Error as e:
-            print(e)
-            return 0
-
-    def create_revenue_table(self):
-        """Создать таблицу для учёта доходов в базе данных"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS revenue (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    order_id INTEGER,
-                    amount REAL,
-                    date_received TEXT,
-                    FOREIGN KEY(order_id) REFERENCES orders(id)
-                )
-            ''')
-            self.conn.commit()
-            return 1
-        except sqlite3.Error as e:
-            print(e)
-            return 0
-
-    def create_orders_table(self):
-        """Создать или обновить таблицу заказов в базе данных"""
-        try:
-            cursor = self.conn.cursor()
-            cursor.execute('''
-                CREATE TABLE IF NOT EXISTS orders (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT,
-                    link TEXT,
-                    material TEXT,
-                    material_amount INTEGER,
-                    recommended_date TEXT,
-                    importance INTEGER,
-                    settings TEXT,
-                    cost REAL,
-                    payment_info BOOLEAN,
-                    done BOOLEAN,
-                    creation_date TEXT
-                )
-            ''')
-            self.conn.commit()
-            return 1
-        except sqlite3.Error as e:
-            print(e)
-            return 0
-
-    def update_material(self, material_name: str, amount: int, operation: str):
+    def update_material(self, material_name: str, amount: int, operation: str) -> int | float:
         """Обновить количество материала в базе данных"""
         try:
             cursor = self.conn.cursor()
-            cursor.execute('SELECT quantity FROM inventory WHERE material_name = ?', (material_name,))
+            cursor.execute('''INSERT OR IGNORE INTO materials (name, quantity) VALUES (?, 0)''', 
+                         (material_name,))
+            
+            cursor.execute('SELECT quantity FROM materials WHERE name = ?', (material_name,))
             result = cursor.fetchone()
-
-            if operation == 'add':
-                if result:
+            
+            match operation:
+                case 'add':
                     new_quantity = result[0] + amount
-                    cursor.execute('UPDATE inventory SET quantity = ? WHERE material_name = ?',
-                                   (new_quantity, material_name))
-                else:
-                    cursor.execute('INSERT INTO inventory (material_name, quantity) VALUES (?, ?)',
-                                   (material_name, amount))
-            elif operation == 'subtract':
-                if result and result[0] >= amount:
-                    new_quantity = result[0] - amount
-                    cursor.execute('UPDATE inventory SET quantity = ? WHERE material_name = ?',
-                                   (new_quantity, material_name))
-                else:
-                    return -1
+                    cursor.execute('UPDATE materials SET quantity = ? WHERE name = ?',
+                                 (new_quantity, material_name))
+                case 'subtract':
+                    if result[0] >= amount:
+                        new_quantity = result[0] - amount
+                        cursor.execute('UPDATE materials SET quantity = ? WHERE name = ?',
+                                     (new_quantity, material_name))
+                    else:
+                        return -1
+                case _:
+                    raise ValueError("Invalid operation")
+                    
             self.conn.commit()
             return new_quantity if 'new_quantity' in locals() else amount
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def add_order(self, name: str, link: str, material: str, material_amount: int, recommended_date: str,
-                  importance: int, settings: str, cost: float, payment_info: bool, done: bool, creation_date: str):
+    def add_order(self, name: str, link: str, material: str, material_amount: int, 
+                 recommended_date: str, importance: int, settings: str, cost: float, 
+                 payment_info: bool, done: bool, creation_date: str) -> int:
         """Добавить новый заказ в базу данных"""
         try:
             cursor = self.conn.cursor()
+            status_id = 2 if done else 1
+            
+            # Add order
             cursor.execute('''
-                INSERT INTO orders (name, link, material, material_amount, recommended_date, importance, settings, cost, payment_info, done, creation_date) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                name, link, material, material_amount, recommended_date, importance, settings, cost, payment_info, done,
-                creation_date))
+                INSERT INTO orders (name, link, recommended_date, importance, settings, 
+                                  cost, payment_info, status_id, creation_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (name, link, recommended_date, importance, settings, cost, 
+                 payment_info, status_id, creation_date))
+            
+            order_id = cursor.lastrowid
+            
+            # Ensure material exists and add order_materials relation
+            cursor.execute('INSERT OR IGNORE INTO materials (name, quantity) VALUES (?, 0)',
+                         (material,))
+            cursor.execute('SELECT id FROM materials WHERE name = ?', (material,))
+            material_id = cursor.fetchone()[0]
+            
+            cursor.execute('''
+                INSERT INTO order_materials (order_id, material_id, quantity)
+                VALUES (?, ?, ?)
+            ''', (order_id, material_id, material_amount))
+            
             self.conn.commit()
-            return cursor.lastrowid
-        except sqlite3.Error as e:
+            return order_id
+        except Exception as e:
             print(e)
             return -1
 
-    def delete_unpaid_orders(self):
+    def delete_unpaid_orders(self) -> int:
         """Удалить заказы, которые не были оплачены в течение 10 дней после создания"""
         try:
             cursor = self.conn.cursor()
@@ -165,35 +169,48 @@ class DatabaseManager:
             ''', (ten_days_ago_str,))
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def get_order(self, info: str, key: str='id'):
+    def get_order(self, info: str, key: str = 'id') -> tuple | int:
         """Получить информацию о заказе по ID"""
         try:
             cursor = self.conn.cursor()
             if key == 'id':
-                cursor.execute('SELECT * FROM orders WHERE id = ?', (info,))
+                query = '''
+                    SELECT o.*, m.name as material, om.quantity as material_amount 
+                    FROM orders o
+                    LEFT JOIN order_materials om ON o.id = om.order_id
+                    LEFT JOIN materials m ON om.material_id = m.id
+                    WHERE o.id = ?
+                '''
             else:
-                cursor.execute('SELECT * FROM orders WHERE name = ?', (info,))
+                query = '''
+                    SELECT o.*, m.name as material, om.quantity as material_amount 
+                    FROM orders o
+                    LEFT JOIN order_materials om ON o.id = om.order_id
+                    LEFT JOIN materials m ON om.material_id = m.id
+                    WHERE o.name = ?
+                '''
+            cursor.execute(query, (info,))
             return cursor.fetchone()
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def delete_order(self, order_id: int):
+    def delete_order(self, order_id: int) -> int:
         """Удалить заказ по ID"""
         try:
             cursor = self.conn.cursor()
             cursor.execute('DELETE FROM orders WHERE id = ?', (order_id,))
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def add_revenue(self, order_id: int, amount: float, date_received: str):
+    def add_revenue(self, order_id: int, amount: float, date_received: str) -> int:
         """Добавить запись о доходе от заказа"""
         try:
             cursor = self.conn.cursor()
@@ -203,25 +220,31 @@ class DatabaseManager:
             ''', (order_id, amount, date_received))
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def add_expense(self, category: str, amount: float, date_spent: str, description: str):
+    def add_expense(self, category: str, amount: float, date_spent: str, description: str) -> int:
         """Добавить запись о расходах"""
         try:
             cursor = self.conn.cursor()
+            cursor.execute('INSERT OR IGNORE INTO expense_categories (name) VALUES (?)',
+                         (category,))
+            cursor.execute('SELECT id FROM expense_categories WHERE name = ?', (category,))
+            category_id = cursor.fetchone()[0]
+            
             cursor.execute('''
-                INSERT INTO expenses (category, amount, date_spent, description)
+                INSERT INTO expenses (category_id, amount, date_spent, description)
                 VALUES (?, ?, ?, ?)
-            ''', (category, amount, date_spent, description))
+            ''', (category_id, amount, date_spent, description))
+            
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def get_all_materials_excel(self, excel_path: str):
+    def get_all_materials_excel(self, excel_path: str) -> int:
         """Экспортировать данные из таблицы inventory в файл Excel"""
         try:
             query = "SELECT * FROM inventory"
@@ -229,19 +252,23 @@ class DatabaseManager:
             df.to_excel(excel_path, index=False)
 
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def get_last_month_date_range(self):
+    def get_last_month_date_range(self) -> tuple[datetime | None, datetime | None]:
         """Получить начало и конец последнего календарного месяца"""
-        today = datetime.today()
-        first_day_this_month = today.replace(day=1)
-        last_day_last_month = first_day_this_month - timedelta(days=1)
-        first_day_last_month = last_day_last_month.replace(day=1)
-        return first_day_last_month, last_day_last_month
+        try:
+            today = datetime.today()
+            first_day_this_month = today.replace(day=1)
+            last_day_last_month = first_day_this_month - timedelta(days=1)
+            first_day_last_month = last_day_last_month.replace(day=1)
+            return first_day_last_month, last_day_last_month
+        except Exception as e:
+            print(e)
+            return None, None
 
-    def export_last_month_data_to_excel(self, excel_path: str):
+    def export_last_month_data_to_excel(self, excel_path: str) -> int:
         """Экспортировать данные расходов и доходов за последний календарный месяц в один файл Excel"""
         try:
             self.create_expenses_table()
@@ -267,11 +294,11 @@ class DatabaseManager:
                 revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
 
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def export_orders_to_excel(self, excel_path: str, done: bool=True):
+    def export_orders_to_excel(self, excel_path: str, done: bool = True) -> int:
         try:
             query = '''
                 SELECT * FROM orders
@@ -285,11 +312,11 @@ class DatabaseManager:
             df.to_excel(excel_path, sheet_name=sheet_name, index=False)
 
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def export_expenses_and_revenue_between_dates_to_excel(self, start_date: str, end_date: str, excel_path: str):
+    def export_expenses_and_revenue_between_dates_to_excel(self, start_date: str, end_date: str, excel_path: str) -> int:
         """Получить расходы и доходы между указанными датами и сохранить их в Excel"""
         try:
             cursor = self.conn.cursor()
@@ -305,11 +332,11 @@ class DatabaseManager:
                 revenue_df.to_excel(writer, sheet_name='Revenue', index=False)
 
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def auto_delete_expired_records(self, days: int):
+    def auto_delete_expired_records(self, days: int) -> int:
         """Удалить записи из указанной таблицы, которые старше определенного количества дней"""
         try:
             cursor = self.conn.cursor()
@@ -318,45 +345,68 @@ class DatabaseManager:
             cursor.execute(f"DELETE FROM orders WHERE creation_date <= ?", (cutoff_date_str,))
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def get_material_by_name(self, material_name: str):
+    def get_material_by_name(self, material_name: str) -> tuple | int:
         """Получить информацию о материале по названию"""
         try:
             cursor = self.conn.cursor()
-            cursor.execute('SELECT * FROM inventory WHERE material_name = ?', (material_name,))
+            cursor.execute('SELECT name, quantity FROM materials WHERE name = ?', 
+                         (material_name,))
             return cursor.fetchone()
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def get_expenses_by_category(self, category: str, excel_path: str):
+    def get_expenses_by_category(self, category: str, excel_path: str) -> int:
         """Получить список расходов по категории и экспортировать в Excel"""
         try:
             cursor = self.conn.cursor()
-            query = 'SELECT * FROM expenses WHERE category = ?'
+            query = '''
+                SELECT e.amount, e.date_spent, e.description 
+                FROM expenses e
+                JOIN expense_categories ec ON e.category_id = ec.id
+                WHERE ec.name = ?
+            '''
             df = pd.read_sql_query(query, self.conn, params=(category,))
             df.to_excel(excel_path, index=False)
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def update_order_status(self, order_id: int, done: bool):
+    def update_order_status(self, order_id: int, done: bool) -> int:
         """Обновить статус заказа по ID"""
         try:
             cursor = self.conn.cursor()
-            cursor.execute('UPDATE orders SET done = ? WHERE id = ?', (done, order_id))
+            status_id = 2 if done else 1
+            cursor.execute('UPDATE orders SET status_id = ? WHERE id = ?', 
+                         (status_id, order_id))
             self.conn.commit()
             return 1
-        except sqlite3.Error as e:
+        except Exception as e:
             print(e)
             return 0
 
-    def close_connection(self):
+    def close_connection(self) -> int:
         """Закрыть соединение с базой данных"""
-        if self.conn:
-            self.conn.close()
-            return 1
+        try:
+            if self.conn:
+                self.conn.close()
+                return 1
+            return 0
+        except Exception as e:
+            print(e)
+            return 0
+
+    def get_all_materials(self) -> list[tuple] | int:
+        """Получить список всех материалов из базы данных"""
+        try:
+            cursor = self.conn.cursor()
+            cursor.execute('SELECT name, quantity FROM materials')
+            return cursor.fetchall()
+        except Exception as e:
+            print(e)
+            return 0

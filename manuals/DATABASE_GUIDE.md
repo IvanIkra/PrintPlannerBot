@@ -36,6 +36,16 @@ db_manager.update_material('Steel', 50, 'add')
 #### Возвращает:
 - Новое количество материала в случае успеха, `-1` если недостаточно материала для вычитания, `0` в случае ошибки.
 
+### `get_all_materials(self)`
+#### Описание:
+Получает список всех материалов из базы данных.
+#### Использование:
+```python
+materials = db_manager.get_all_materials()
+```
+#### Возвращает:
+- Список кортежей (name, quantity) в случае успеха, пустой 0 в случае ошибки.
+
 ### `add_order(self, name, link, material, material_amount, recommended_date, importance, settings, cost, payment_info, done, creation_date)`
 #### Описание:
 Добавляет новый заказ в базу данных.
