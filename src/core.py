@@ -7,7 +7,7 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.filters.command import Command, Message, CommandObject
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import CallbackQuery
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup
 
 import src.root.keyboards as kb
 from src.root.fsm_order import Ord, ord_1, ord_2, ord_3, ord_4, ord_5, ord_6, ord_7, ord_8, get_order_data
@@ -51,34 +51,58 @@ class Payment(StatesGroup):
 
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
+    try:
+        image = types.FSInputFile("data/images/printplanner.webp")
+        await message.answer_photo(
+            photo=image,
+            caption="👋 Вас приветствует команда разработчиков Binary Brigade."
+        )
+    except FileNotFoundError:
+        await message.answer(
+            "👋 Вас приветствует команда разработчиков Binary Brigade."
+        )
     await message.answer(
-        "👋 Вас приветствует команда разработчиков Binary Brigade."
-        "\n*↓Нажмите, чтобы вызвать меню↓*", reply_markup=kb.keyboard_inline2, parse_mode="Markdown")
-
+        "*↓Нажмите, чтобы вызвать меню↓*",
+        reply_markup=kb.keyboard_inline2,
+        parse_mode="Markdown"
+    )
 
 @dp.message(Command("menu"))
 async def menu(message: types.Message):
     await message.answer('Добро пожаловать в меню бота-помощника в 3D печати!\
  Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
 
-dp.message.register(ord_1)
-dp.message.register(ord_2, Ord.name)
-dp.message.register(ord_3, Ord.link)
-dp.message.register(ord_4, Ord.material)
-dp.message.register(ord_5, Ord.material_amount)
-dp.message.register(ord_6, Ord.recommended_date)
-dp.message.register(ord_7, Ord.importance)
-dp.message.register(ord_8, Ord.settings)
+@dp.callback_query(F.data == 'make_order')
+async def make_order(callback: CallbackQuery, state: FSMContext):
+    await ord_1(callback, state)
 
-@dp.callback_query(F.data == 'no_makeorder')
-async def no_makeorder(callback: CallbackQuery, state: FSMContext):
-    data = await get_order_data(state)
-    await callback.answer("Отмена создания заказа")
-    await callback.message.edit_text(
-        f'Заказ *{data["name"]}* не создан',
-        reply_markup=kb.keyboard_inline7,
-        parse_mode="Markdown"
-    )
+@dp.message(Ord.name)
+async def handle_name(message: Message, state: FSMContext):
+    await ord_2(message, state)
+
+@dp.message(Ord.link)
+async def handle_link(message: Message, state: FSMContext):
+    await ord_3(message, state)
+
+@dp.message(Ord.material)
+async def handle_material(message: Message, state: FSMContext):
+    await ord_4(message, state)
+
+@dp.message(Ord.material_amount)
+async def handle_material_amount(message: Message, state: FSMContext):
+    await ord_5(message, state)
+
+@dp.message(Ord.recommended_date)
+async def handle_date(message: Message, state: FSMContext):
+    await ord_6(message, state)
+
+@dp.message(Ord.importance)
+async def handle_importance(message: Message, state: FSMContext):
+    await ord_7(message, state)
+
+@dp.message(Ord.settings)
+async def handle_settings(message: Message, state: FSMContext):
+    await ord_8(message, state)
 
 @dp.callback_query(F.data == 'yes_makeorder')
 async def yes_makeorder(callback: CallbackQuery, state: FSMContext):
@@ -96,7 +120,7 @@ async def our_price_makeorder(callback: CallbackQuery):
     await callback.answer("Готово")
     await callback.message.edit_text(
         f'Готово! Вы можете вернуться к меню',
-        reply_markup=kb.keyboard_inline7,
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[kb.backmenu_button]]),
         parse_mode="Markdown"
     )
 
@@ -106,7 +130,7 @@ async def custom_price_makeorder(callback: CallbackQuery):
     await callback.message.answer("Введите стоимость")
     await callback.message.edit_text(
         f'Готово! Вы можете вернуться к меню',
-        reply_markup=kb.keyboard_inline7
+        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[kb.backmenu_button]])
     )
 
 # @dp.message(Command("help"))
@@ -292,60 +316,88 @@ async def custom_price_makeorder(callback: CallbackQuery):
 async def universal_back(callback: CallbackQuery, state: FSMContext):
     current_state = await state.get_state()
     
-    if current_state is not None:
-        await state.clear()
+    state_transitions = {
+        Ord.link: (Ord.name, "Введите название заказа"),
+        Ord.material: (Ord.link, "Введите ссылку на 3D модель"),
+        Ord.material_amount: (Ord.material, "Введите название используемого материала"),
+        Ord.recommended_date: (Ord.material_amount, "Введите количество(в граммах) используемого материала (целое число)"),
+        Ord.importance: (Ord.recommended_date, "Введите дату выполнения (в формате ГГГГ-ММ-ДД)"),
+        Ord.settings: (Ord.importance, "Введите важность заказа от 1 до 10 (целое число)")
+    }
 
-    await callback.answer("Вы вернулись назад")
+    if current_state == Ord.name:
+        await callback.answer("Вы вернулись назад")
+        await callback.message.edit_text(
+            'Ваши не выполненные заказы:',
+            reply_markup=kb.keyboard_inline1
+        )
+        await state.clear()
+    elif current_state in state_transitions:
+        prev_state, message_text = state_transitions[current_state]
+        data = await state.get_data()
+        await state.set_state(prev_state)
+        await state.update_data(**data)
+        await callback.answer("Вы вернулись назад")
+        await callback.message.edit_text(
+            message_text,
+            reply_markup=kb.keyboard_inline6
+        )
+    else:
+        await callback.answer("Вы вернулись в главное меню")
+        await callback.message.edit_text(
+            'Добро пожаловать в меню бота-помощника в 3D печати! Выберите нужный вам пункт меню.',
+            reply_markup=kb.keyboard_inline_main_menu
+        )
+        if current_state is not None:
+            await state.clear()
+@dp.callback_query(F.data == 'menus')
+async def make_order(callback: CallbackQuery):
+    await callback.answer("Вы перешли к меню")
     await callback.message.edit_text(
         'Добро пожаловать в меню бота-помощника в 3D печати! Выберите нужный вам пункт меню.',
         reply_markup=kb.keyboard_inline_main_menu
     )
 
-@dp.callback_query(F.data == 'make_order')
-async def make_order(callback: CallbackQuery, state: FSMContext):
-    await callback.answer("Переход к созданию заказа")
-    await callback.message.edit_text("Введите название заказа")
-    await state.set_state(Ord.name)
-
-
-@dp.callback_query(F.data == 'menus')
-async def make_order(callback: CallbackQuery):
-    await callback.answer("Вы перешли к меню")
-    await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
- Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
-
+@dp.callback_query(F.data == 'cancel_order')
+async def cancel_order(callback: CallbackQuery, state: FSMContext):
+    await callback.answer("Отмена создания заказа")
+    await callback.message.edit_text(
+        'Ваши не выполненные заказы:',
+        reply_markup=kb.keyboard_inline1
+    )
+    await state.clear()
 
 @dp.callback_query(F.data == 'order_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления заказами")
-    await callback.message.edit_text('Ваши не выполненные заказы:', reply_markup=kb.keyboard_inline1)
-
+    await callback.message.edit_text(
+        'Ваши не выполненные заказы:',
+        reply_markup=kb.keyboard_inline1
+    )
 
 @dp.callback_query(F.data == 'back_menu')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к меню")
-    await callback.message.edit_text('Добро пожаловать в меню бота-помощника в 3D печати!\
- Выберите нужный вам пункт меню.', reply_markup=kb.keyboard_inline_main_menu)
-
-
-@dp.callback_query(F.data == 'cancel_order_manage')
-async def make_order(callback: CallbackQuery):
-    await callback.answer("Вы перешли к панели управления заказами")
-    await callback.message.edit_text('Ваши не выполненные заказы:', reply_markup=kb.keyboard_inline1)
-
+    await callback.message.edit_text(
+        'Добро пожаловать в меню бота-помощника в 3D печати! Выберите нужный вам пункт меню.',
+        reply_markup=kb.keyboard_inline_main_menu
+    )
 
 @dp.callback_query(F.data == 'material_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления материалами")
-    await callback.message.edit_text('Материалы в наличии:', reply_markup=kb.keyboard_inline3)
-
+    await callback.message.edit_text(
+        'Материалы в наличии:',
+        reply_markup=kb.keyboard_inline3
+    )
 
 @dp.callback_query(F.data == 'finance_manage')
 async def make_order(callback: CallbackQuery):
     await callback.answer("Вы перешли к панели управления финансами")
-    await callback.message.edit_text('Финансы за последний месяц:', reply_markup=kb.keyboard_inline4)
-
-
+    await callback.message.edit_text(
+        'Финансы за последний месяц:',
+        reply_markup=kb.keyboard_inline4
+    )
 async def main():
     await dp.start_polling(bot)
 

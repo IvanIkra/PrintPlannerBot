@@ -23,10 +23,11 @@ class Payment(StatesGroup):
     summ = State()
 
 
-async def ord_1(message: Message, state: FSMContext):
+async def ord_1(callback: CallbackQuery, state: FSMContext):
+    await callback.answer("Переход к созданию заказа")
+    await callback.message.edit_text("Введите название заказа",
+                                   reply_markup=kb.keyboard_inline6)
     await state.set_state(Ord.name)
-    await message.answer("Введите название заказа",
-                         reply_markup=kb.keyboard_inline6)
 
 
 async def ord_2(message: Message, state: FSMContext):
