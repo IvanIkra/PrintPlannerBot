@@ -52,7 +52,7 @@ class Payment(StatesGroup):
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message):
     try:
-        image = types.FSInputFile("data/images/printplanner.png")
+        image = types.FSInputFile("data/images/printplanner.webp")
         await message.answer_photo(
             photo=image,
             caption="👋 Вас приветствует команда разработчиков Binary Brigade."
